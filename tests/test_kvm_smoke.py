@@ -17,8 +17,8 @@ from corvus_node.cli import main
 from corvus_node.node.control import ControlError, node_pid
 from corvus_node.node.daemon import rpc_status
 
-_SKIP_NO_SMOKE = "set CORVUS_NODE_SMOKE=1 after sudo make install (no sudo for the tests)"
-_SKIP_NO_NODE = "Node service is not running; sudo make install, then CORVUS_NODE_SMOKE=1"
+_SKIP_NO_SMOKE = "set CORVUS_NODE_SMOKE=1 after ./install.sh (no sudo for the tests)"
+_SKIP_NO_NODE = "Node service is not running; ./install.sh, then CORVUS_NODE_SMOKE=1"
 _SKIP_VM_BUSY = "guest VM is already running; corvus vm stop first"
 
 

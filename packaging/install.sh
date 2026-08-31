@@ -1,19 +1,36 @@
 #!/bin/bash
-# Privileged install: venv, PATH wrapper, group, systemd. Runtime CLI does not need sudo.
+# Privileged install into $HOME/Corvus-Node. Jailer chroots stay /var/lib/corvus-node.
+# Organization: Black Rain Labs — Research & Development Division
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PYTHON_SYS="${PYTHON:-$(command -v python3)}"
-PREFIX="${CORVUS_NODE_PREFIX:-/opt/corvus-node}"
-VENV="$PREFIX/venv"
 GROUP="${CORVUS_NODE_GROUP:-corvus}"
 UNIT_DIR="${UNIT_DIR:-/etc/systemd/system}"
-ENV_FILE="${ENV_FILE:-/etc/corvus-node/env}"
-RUNTIME_DIR="${CORVUS_NODE_RUNTIME_DIR:-/var/lib/corvus-node}"
-BIN_DIR="${BIN_DIR:-/usr/local/bin}"
+JAIL_DIR="${CORVUS_NODE_JAIL_DIR:-/var/lib/corvus-node}"
+
+operator_home() {
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+    getent passwd "$SUDO_USER" | cut -d: -f6
+    return
+  fi
+  echo "${HOME}"
+}
+
+if [[ -n "${CORVUS_NODE_PREFIX:-}" ]]; then
+  PREFIX="$CORVUS_NODE_PREFIX"
+else
+  PREFIX="$(operator_home)/Corvus-Node"
+fi
+VENV="$PREFIX/venv"
+BIN_DIR="$PREFIX/bin"
+RUNTIME_DIR="${CORVUS_NODE_RUNTIME_DIR:-$PREFIX/run}"
+ASSETS="$PREFIX/assets"
+ENV_FILE="${CORVUS_NODE_ENV_FILE:-$PREFIX/env}"
+CACHE="${CORVUS_NODE_CACHE:-$ROOT/.cache/corvus-node}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
-  echo "corvus: install requires root (sudo make install)" >&2
+  echo "corvus: privileged install requires root (./install.sh invokes sudo)" >&2
   exit 1
 fi
 
@@ -25,22 +42,19 @@ fi
 if ! getent group "$GROUP" >/dev/null; then
   groupadd --system "$GROUP"
 fi
-if [[ -n "${SUDO_USER:-}" ]]; then
-  usermod -aG "$GROUP" "$SUDO_USER"
+OP_USER="${SUDO_USER:-}"
+if [[ -n "$OP_USER" && "$OP_USER" != "root" ]]; then
+  usermod -aG "$GROUP" "$OP_USER"
 fi
 
-install -d -m 0750 -o root -g "$GROUP" "$PREFIX" "$RUNTIME_DIR"
-install -d -m 0755 /etc/corvus-node "$BIN_DIR"
+install -d -m 0750 -o root -g "$GROUP" "$PREFIX" "$VENV" "$RUNTIME_DIR" "$ASSETS" "$JAIL_DIR"
+install -d -m 0755 -o root -g "$GROUP" "$BIN_DIR"
 
 "$PYTHON_SYS" -m venv "$VENV"
 "$VENV/bin/python" -m pip install --upgrade pip
 "$VENV/bin/python" -m pip install "$ROOT"
-ln -sfn "$VENV/bin/corvus" "$BIN_DIR/corvus"
-ln -sfn "$VENV/bin/corvus" "$BIN_DIR/corvus-node"
-
-CACHE="${CORVUS_NODE_CACHE:-$ROOT/.cache/corvus-node}"
-ASSETS="$RUNTIME_DIR/assets"
-install -d -m 0750 -o root -g "$GROUP" "$ASSETS"
+chown -R root:"$GROUP" "$VENV"
+chmod -R u=rwX,g=rX,o= "$VENV"
 
 copy_asset() {
   local src="$1"
@@ -73,8 +87,11 @@ fi
 if [[ -z "$JAILER" ]]; then
   JAILER="$(copy_asset "$CACHE/jailer")"
 fi
+chown -R root:"$GROUP" "$ASSETS"
+chmod -R u=rwX,g=rX,o= "$ASSETS"
 
 {
+  echo "CORVUS_NODE_PREFIX=$PREFIX"
   echo "CORVUS_NODE_KERNEL=$KERNEL"
   echo "CORVUS_NODE_ROOTFS=$ROOTFS"
   echo "CORVUS_NODE_FIRECRACKER=$FIRECRACKER"
@@ -84,7 +101,28 @@ fi
 chmod 0640 "$ENV_FILE"
 chown root:"$GROUP" "$ENV_FILE"
 
-sed "s|PYTHON_PLACEHOLDER|$VENV/bin/python|" "$ROOT/packaging/corvus-node.service.in" \
+cat >"$BIN_DIR/corvus" <<EOF
+#!/bin/sh
+# Corvus-Node operator CLI. Sources install env (group corvus).
+set -eu
+PREFIX="$PREFIX"
+ENVF="\$PREFIX/env"
+if [ -r "\$ENVF" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "\$ENVF"
+  set +a
+fi
+exec "\$PREFIX/venv/bin/python" -m corvus_node "\$@"
+EOF
+chmod 0755 "$BIN_DIR/corvus"
+chown root:"$GROUP" "$BIN_DIR/corvus"
+ln -sfn "$BIN_DIR/corvus" "$BIN_DIR/corvus-node"
+
+sed \
+  -e "s|PYTHON_PLACEHOLDER|$VENV/bin/python|" \
+  -e "s|ENV_FILE_PLACEHOLDER|$ENV_FILE|" \
+  "$ROOT/packaging/corvus-node.service.in" \
   >"$UNIT_DIR/corvus-node.service"
 chmod 0644 "$UNIT_DIR/corvus-node.service"
 
@@ -102,18 +140,8 @@ for p in "$KERNEL" "$ROOTFS" "$FIRECRACKER" "$JAILER"; do
 done
 
 echo "corvus: installed to $PREFIX (CLI: $BIN_DIR/corvus)."
+echo "corvus: Firecracker jail dir $JAIL_DIR (short path for vsock)."
 if [[ "$missing" -ne 0 ]]; then
   echo "corvus: guest assets were not in $CACHE."
-  echo "corvus: from this checkout: make guest-assets && sudo make install"
-  echo "corvus: corvus status will show Isolation: not ready until assets are installed."
-else
-  echo
-  echo "Next (no sudo):"
-  echo "  newgrp $GROUP          # or log out and back in, once"
-  echo "  corvus status          # Node up, Isolation: ready"
-  echo "  corvus vm start"
-  echo "  corvus chat            # type a line; /exit to leave"
-  echo "  corvus stop            # shuts down the guest VM; Node stays up"
-  echo
-  echo "Updates: corvus update   (sudo if the prefix is not writable; skipped on unreleased trees)"
+  echo "corvus: from this checkout: ./install.sh   (or make guest-assets && sudo make install)"
 fi

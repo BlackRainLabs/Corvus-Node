@@ -13,13 +13,27 @@ import socket
 from pathlib import Path
 from typing import Any
 
-from corvus_node.vm.launcher import instance_base_dir, pid_is_alive, read_pid_file
+from corvus_node.vm.launcher import pid_is_alive, read_pid_file
 
 CONTROL_SOCK_NAME = "control.sock"
 PID_NAME = "node.pid"
 LOG_NAME = "node.log"
 CONTROL_GROUP = "corvus"
-INSTALL_HINT = "Node service is not running; sudo make install"
+INSTALL_HINT = "Node service is not running; ./install.sh or sudo make install"
+
+
+def product_prefix() -> Path:
+    env = os.environ.get("CORVUS_NODE_PREFIX", "").strip()
+    if env:
+        return Path(env)
+    return Path.home() / "Corvus-Node"
+
+
+def runtime_dir() -> Path:
+    env = os.environ.get("CORVUS_NODE_RUNTIME_DIR", "").strip()
+    if env:
+        return Path(env)
+    return product_prefix() / "run"
 
 
 class ControlError(RuntimeError):
@@ -28,13 +42,6 @@ class ControlError(RuntimeError):
     def __init__(self, message: str, *, code: str = "control") -> None:
         super().__init__(message)
         self.code = code
-
-
-def runtime_dir() -> Path:
-    env = os.environ.get("CORVUS_NODE_RUNTIME_DIR", "").strip()
-    if env:
-        return Path(env)
-    return instance_base_dir()
 
 
 def control_socket_path() -> Path:
