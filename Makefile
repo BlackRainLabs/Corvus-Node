@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help check test lint guest-assets install smoke
+.PHONY: help check test lint guest-assets install smoke git-dates
 
 help:
 	@echo "Corvus-Node — a private AI agent for Linux"
@@ -30,10 +30,13 @@ help:
 check:
 	bash packaging/check-prereqs.sh
 
-test:
+git-dates:
+	bash packaging/check-git-dates.sh
+
+test: git-dates
 	pytest -q
 
-lint:
+lint: git-dates
 	ruff check src tests guest
 	ruff format --check src tests guest
 

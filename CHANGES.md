@@ -4,6 +4,20 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - commits and Releases use the wall clock
+
+**Documents Modified:**
+- `packaging/check-git-dates.sh`, `tests/test_check_git_dates.py`, `Makefile`
+- `.github/workflows/release.yml`, `.cursor/rules/git-timestamps.mdc`
+- `AGENTS.md`, `CONTRIBUTING.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Never export `GIT_AUTHOR_DATE` / `GIT_COMMITTER_DATE`. `make test` refuses them. Release CI unsets those variables and `SOURCE_DATE_EPOCH` so wheels and GitHub Releases are stamped now. GitHub lists files by author date.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - every new version is a GitHub Release
 
 **Documents Modified:**
