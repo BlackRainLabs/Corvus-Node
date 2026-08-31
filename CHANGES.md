@@ -4,6 +4,18 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - README lede: security-first harness
+
+**Documents Modified:**
+- `README.md`, `CHANGES.md`
+
+**Key Changes:**
+- README opens on Corvus as a security-first AI agent harness (Firecracker guest, Node as the only door, default-deny). Install path and version (0.1.5) unchanged.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - Operator first-run docs and host check
 
 **Documents Modified:**
