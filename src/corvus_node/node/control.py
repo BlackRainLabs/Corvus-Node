@@ -20,6 +20,15 @@ PID_NAME = "node.pid"
 LOG_NAME = "node.log"
 CONTROL_GROUP = "corvus"
 INSTALL_HINT = "Corvus-Node is not running; ./install.sh"
+START_HINT = "Corvus-Node is not running; corvus start"
+
+
+def not_running_hint() -> str:
+    """Install if Corvus-Node was never set up; corvus start if it is just down."""
+    prefix = product_prefix()
+    if runtime_dir().resolve() == (prefix / "run").resolve() and (prefix / "env").is_file():
+        return START_HINT
+    return INSTALL_HINT
 
 
 def product_prefix() -> Path:
@@ -186,7 +195,7 @@ class ControlClient:
         except OSError as exc:
             sock.close()
             raise ControlError(
-                INSTALL_HINT,
+                not_running_hint(),
                 code="not_running",
             ) from exc
         self._sock = sock

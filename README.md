@@ -62,7 +62,7 @@ Optional: `--tools echo` lets the agent echo text back. `--workspace /path --too
 ### If something goes wrong
 
 - The installer prints red **need** lines — install what it asks, turn virtualization on in firmware if it says so, run `./install.sh` again.
-- `corvus status` shows `Node: down` — Corvus-Node is not running in the background. `corvus start` (or `sudo systemctl start corvus-node`, or `./install.sh` from the folder you unpacked).
+- `corvus status` shows `Node: down` — Corvus-Node is not running in the background. `corvus start` (or `sudo systemctl start corvus-node`). You do not need to re-run `./install.sh` after `corvus stop`.
 - `Isolation: not ready` — run `./install.sh` again so the agent environment finishes installing.
 - `chat` / `vm start` refuse to run if Corvus-Node is down. That is intentional. `corvus start` brings Corvus-Node up and asks before the VM.
 - Permission denied — re-run `./install.sh`. After that, `corvus` should just work.

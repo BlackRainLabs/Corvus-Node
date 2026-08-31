@@ -4,6 +4,20 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - corvus stop starts again with corvus start
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `src/corvus_node/node/control.py`
+- `tests/test_cli.py`, `tests/test_control.py`
+- `README.md`, `AGENTS.md`, `docs/architecture/OVERVIEW.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- After `corvus stop`, the CLI told operators to re-run `./install.sh`. Install is already done. Start again with `corvus start`. If Node is down after an install, `status` / `chat` / `vm` say the same.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - v0.1.8 Kubuntu install
 
 **Documents Modified:**
