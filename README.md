@@ -24,7 +24,7 @@ cd Corvus-Node
 
 The installer may ask for your password to set up isolation. **Chatting does not use sudo.** The agent never gets your admin account.
 
-Re-run `./install.sh` anytime. From a git clone it uses this checkout; `--release` fetches the GitHub wheel instead. If Corvus is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
+Re-run `./install.sh` anytime. From a git clone it uses this checkout; `--release` fetches the GitHub wheel instead. If Corvus is already installed, you can **upgrade** or **keep** the current version. The installer does not look up GitHub unless you pass `--release`. `corvus status` and `corvus update` do. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
 
 ## First run
 
@@ -76,7 +76,7 @@ That is the product: isolation, not a plugin.
 
 Operator copy (this README, `./install.sh`, `corvus --help`) stays plain language. Architecture, isolation rules, and the four-engine model live in the docs below.
 
-- [Contributing](CONTRIBUTING.md) — license, changelog, tests
+- [Contributing](CONTRIBUTING.md) — license, changelog, tests, this-tree install before smoke
 - [Architecture overview](docs/architecture/OVERVIEW.md) — invariants (authoritative)
 - [Agent workflow](docs/architecture/AGENT-WORKFLOW.md) — guest engines
 - [Policy](docs/architecture/POLICY.md) — what is allowed
@@ -88,6 +88,8 @@ Operator copy (this README, `./install.sh`, `corvus --help`) stays plain languag
 - [AGENTS.md](AGENTS.md) — layout for this tree
 
 Dev loop (no virtual machine): `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && make test && make lint`
+
+After you change this clone, `./install.sh` puts **this tree** on the machine; then `make smoke` if you need the live guest. Do not use `corvus update` for that. [Operations](docs/planning/OPERATIONS.md).
 
 ## License
 

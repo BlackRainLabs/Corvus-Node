@@ -13,7 +13,7 @@
    - Root `SECURITY.md` (threat model)
    - Root `CHANGES.md` (latest changes)
    - `docs/architecture/AGENT-WORKFLOW.md` (guest engine behavior)
-   - `docs/planning/OPERATIONS.md` (run, test, Firecracker smoke)
+   - `docs/planning/OPERATIONS.md` (this-tree vs GitHub release, before-merge loop, bake, smoke)
    - Root `README.md` (operator setup: `./install.sh` into `$HOME/Corvus-Node`)
 
 2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`.
@@ -27,7 +27,8 @@
    - `corvus status` runs without KVM and reports isolation gaps plus a GitHub version check.
    - `./install.sh` once (`$HOME/Corvus-Node` venv + group + systemd Node; `corvus` on PATH uses group `corvus` via `sg`). Operator `vm` / `chat` / `run` do not use sudo. `sudo make install` is the inner privileged step.
    - `corvus vm start|stop|status` is the Firecracker guest. `start` is an alias of `vm start`. `vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`).
-   - `corvus update` is for the **installed** app vs GitHub **releases** (wheel into `$HOME/Corvus-Node/venv`, not a git clone). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then installs, then starts Node again. `--yes` skips the prompts. It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.6` while GitHub is still `0.1.5`). `./install.sh` from a git checkout installs **this tree**; `--release` (or no git tree) uses the GitHub release wheel.
+   - `corvus update` is for the **installed** app vs GitHub **releases** (wheel into `$HOME/Corvus-Node/venv`, not a git clone). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then installs, then starts Node again. `--yes` skips the prompts. It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.6` while GitHub is still `0.1.5`).
+   - `./install.sh` from a git checkout (or an unpacked snapshot with `src/`) installs **this tree**. `--release`, or no local source, uses the GitHub release wheel. The installer does not announce a newer GitHub version; `corvus status` / `corvus update` do. Live KVM tests (`make smoke`) need that installed Node. `make test` does not. After clone changes, run `./install.sh` again before smoke. Publish a user build with a `v*` tag (`.github/workflows/release.yml`).
 
 5. **Runtime Agent Workflow**:
    - `AGENT-WORKFLOW.md` is binding for guest behavior.

@@ -13,8 +13,10 @@ Operator-facing copy (README, `./install.sh`, `corvus --help`) stays plain langu
 2. Keep Engine 3 isolated from tools and memory.
 3. Record every change in root `CHANGES.md` (date, documents modified, key changes, reviewed by).
 4. Update "Last Updated" on docs you touch. Do not add YAML `---` frontmatter.
-5. Run `make test` and `make lint`.
+5. Run `make test` and `make lint` (developer `.venv`; not the installed Node).
 6. **Stub first.** New tools or LLM-facing behavior must be reachable from `StubLlm` (`src/corvus_node/llm/stub.py`) so CI can test the path without a provider. Extend `_pick_calls` (or the keyword lists), add `tests/test_stub.py`, and a paired-turn test when the tool path runs. Do not wait for a real model.
+7. Put **this tree** on the machine with `./install.sh` from the clone (upgrade if Corvus is already installed). Then `make smoke` if you need the live guest. Do not use `corvus update` for that.
+8. Open a PR. Tag `v*` after merge only when users should get a GitHub Release.
 
 Dev loop (no VM):
 

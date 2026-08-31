@@ -4,6 +4,20 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - workflow docs match clone vs GitHub release
+
+**Documents Modified:**
+- `AGENTS.md`, `CONTRIBUTING.md`, `README.md`, `Makefile`, `CHANGES.md`
+- `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`
+- `docs/architecture/OVERVIEW.md`, `guest/README.md`
+
+**Key Changes:**
+- Docs state the same loop: `make test` is the clone `.venv`; `./install.sh` from this tree updates `$HOME/Corvus-Node`; `make smoke` hits that Node. `corvus update` / `--release` are GitHub. The installer does not announce a newer GitHub version. `sg` is how group `corvus` is regained (no `newgrp` at install end).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - local git vs GitHub release; upgrade or keep
 
 **Documents Modified:**

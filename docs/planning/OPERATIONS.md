@@ -10,7 +10,7 @@
 
 ## First run (operator)
 
-Linux with KVM. Sudo only when the installer needs it. Group `corvus` is entered for you.
+Linux with KVM. Sudo only when the installer needs it. `corvus` uses group `corvus` via `sg` (no `newgrp`).
 
 ```bash
 ./install.sh
@@ -20,9 +20,22 @@ corvus chat
 corvus vm stop
 ```
 
-`./install.sh` from a **git checkout** installs this tree. `--release` (or a directory with no git metadata) uses the GitHub **release wheel**. If Corvus is already installed, the installer asks to upgrade or keep the current version. It puts `corvus` on PATH (`/usr/local/bin/corvus`); the command uses group `corvus` automatically (no `newgrp`). Re-runs skip green already-up-to-date steps. If Node is already running **and** this run will replace files, the installer explains and asks before shutting it down (guest then systemd), then continues and starts Node again. The end of the installer prints a **Status** block (`corvus status --brief`: Node and VM only) then **You're set**. `vm stop` shuts down the guest VM (confirmation); the Node systemd unit stays up. `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). If Node is down, `vm` / `chat` fail closed.
+`./install.sh` from a **git checkout** (or an unpacked release snapshot that still has `src/`) installs **this tree**. `--release`, or a directory with no Corvus source, fetches the GitHub **release wheel**. The installer does **not** tell you GitHub has a newer version; `corvus status` and `corvus update` do that. If Corvus is already installed, the installer asks to upgrade or keep the current version. It puts `corvus` on PATH (`/usr/local/bin/corvus`). Re-runs skip green already-up-to-date steps. If Node is already running **and** this run will replace files, the installer explains and asks before shutting it down (guest then systemd), then continues and starts Node again. The end of the installer prints a **Status** block (`corvus status --brief`: Node and VM only) then **You're set**. `vm stop` shuts down the guest VM (confirmation); the Node systemd unit stays up. `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). If Node is down, `vm` / `chat` fail closed.
 
 Make path (same privileged inner script): `make check`, `make guest-assets`, `sudo make install`. Product overview: [README.md](../../README.md).
+
+## Before merge (this checkout)
+
+`make test` / `make lint` use a developer `.venv`. They do **not** update `$HOME/Corvus-Node`. The live guest talks to the **installed** Node.
+
+```bash
+make test
+make lint
+./install.sh          # this tree; say yes to upgrade if Corvus is already installed
+make smoke            # Node must be up; no guest already running
+```
+
+Do not use `corvus update` or `./install.sh --release` to pick up uncommitted clone work. After merge, tag `v*` when users should get a GitHub Release.
 
 ## Dev loop (no VM)
 
@@ -47,7 +60,7 @@ corvus status
 corvus vm start
 ```
 
-Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus`, not user-writable), `$HOME/Corvus-Node/bin/corvus`, env at `$HOME/Corvus-Node/env`, hashed assets under `$HOME/Corvus-Node/assets`, control socket under `$HOME/Corvus-Node/run`, and systemd `corvus-node.service`. Firecracker **jail** dirs stay `/var/lib/corvus-node` (short vsock paths; `/run` is `nodev`). After `./install.sh` the operator CLI does not use sudo. Jailer still runs inside the Node service as root. The installer enters group `corvus` in that terminal.
+Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus`, not user-writable), `$HOME/Corvus-Node/bin/corvus`, env at `$HOME/Corvus-Node/env`, hashed assets under `$HOME/Corvus-Node/assets`, control socket under `$HOME/Corvus-Node/run`, and systemd `corvus-node.service`. Firecracker **jail** dirs stay `/var/lib/corvus-node` (short vsock paths; `/run` is `nodev`). After `./install.sh` the operator CLI does not use sudo. Jailer still runs inside the Node service as root. `corvus` on PATH uses group `corvus` via `sg` (no `newgrp` at the end of install).
 
 `corvus update` refreshes that **installed** prefix from a newer GitHub **release wheel** (`pip` into `$HOME/Corvus-Node/venv`). It does not `git pull` this tree and it does not clone the repo. It asks to upgrade or keep the current version. If Node is running it then explains, confirms, shuts down the guest and Node, then installs, then starts Node again (`--yes` skips the prompts). Sudo is needed because that venv is root-owned and because stopping/starting systemd is a root unit. If you are on a dirty checkout, ahead of `origin/main`, or a version newer than GitHub (typical internal run before a PR merges — local `0.1.6`, GitHub still `0.1.5`), it reports unreleased and does not install. `status` always prints the same check. No GitHub Release is **no GitHub release yet**, not unreachable. Pushing a `v*` tag publishes the wheel and a slim install tarball (see `.github/workflows/release.yml`). Tests set `CORVUS_NODE_SKIP_UPDATE_CHECK=1`.
 
