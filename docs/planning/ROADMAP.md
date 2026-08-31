@@ -8,13 +8,13 @@
 
 # Roadmap
 
-## Now (v0.1.5 — Operator CLI)
+## Now (v0.1.6 — guided installer)
 
+- `./install.sh` into `$HOME/Corvus-Node` (idempotent; sudo only when needed; installer enters group `corvus`)
 - Operator CLI command is `corvus` (`vm start|stop|status`, `chat`, `status`, `settings`, `run --once`, `update`)
 - `corvus stop` / `vm stop` shut down the guest VM first; Node service stays up
 - Host AF_UNIX control socket (group `corvus`); guest stays AF_VSOCK
-- `sudo make install` once; runtime CLI has no sudo
-- Firecracker guest is `vm *`; Node service is systemd (not those verbs)
+- Firecracker jail dirs stay `/var/lib/corvus-node` (vsock path limit)
 - Version check vs GitHub tags; unreleased local trees do not update from GitHub
 - Each version ships `--help` / `status` that name this build; unimplemented verbs fail closed
 - Live host workspace, jailer, hop MAC, RBAC, stub chat
@@ -31,7 +31,7 @@ More tools, stub-first (`StubLlm` + `tests/test_stub.py`). Do not wait for a pro
 - Finish RBAC (elevation UX, remaining firewall gaps)
 - Engine 4 durable `private` memory on the host
 - Split E1 vs E3 as separate guest processes
-- Privileged helper is install+systemd (this version). Polkit / skip `newgrp` later.
+- Polkit / skip a new login shell later (`newgrp` is handled by `./install.sh` in this version)
 - GUI (Qt/QML operator window) on the same Node control socket
 - Social gateways (Telegram, WhatsApp) binding principals on Node
 - Hypervisor as fleet dash for many Corvus-Node instances

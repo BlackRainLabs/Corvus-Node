@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from corvus_node import __version__
 from corvus_node.node.workspace import WorkspaceError, resolve_host_workspace
 
 LAUNCH_NAME = "launch.json"
@@ -90,7 +91,7 @@ def merge_launch(
     if workspace is None:
         out_ws = stored.workspace
     elif len(workspace) > 1:
-        raise WorkspaceError("v0.1.5 accepts one --workspace path")
+        raise WorkspaceError(f"v{__version__} accepts one --workspace path")
     elif len(workspace) == 0:
         out_ws = None
     else:

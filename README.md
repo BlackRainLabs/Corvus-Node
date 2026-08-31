@@ -4,29 +4,32 @@
 
 Talk to it with `corvus` on Linux. Isolation is the product, not a plugin.
 
-v0.1.5 is under active development. This build uses a stub LLM so you can run the real jailer path today.
+v0.1.6 is under active development. This build uses a stub LLM so you can run the real jailer path today.
 
-**Version:** 0.1.5 · **License:** [AGPLv3](LICENSE) · **Org:** Black Rain Labs — Research & Development Division
+**Version:** 0.1.6 · **License:** [AGPLv3](LICENSE) · **Org:** Black Rain Labs — Research & Development Division
 
 ## Install and run
 
-You need a Linux machine (x86_64 or aarch64) with **KVM** (`/dev/kvm`), **Python 3.12+**, `make`, `curl`, `mkfs.ext4` (package `e2fsprogs`), and one of `mmdebstrap`, `debootstrap`, or Docker to build the guest disk. Sudo is only for the one-time install.
+Linux (x86_64 or aarch64) with **KVM**. The installer installs missing packages, bakes the guest disk, and puts Node under **`$HOME/Corvus-Node`**. Sudo is only for jailer/KVM and root-owned files. The installer adds you to group `corvus` and enters that group in the same terminal.
 
 ```bash
 git clone https://github.com/BlackRainLabs/Corvus-Node.git
 cd Corvus-Node
-
-make check                 # what this machine still needs
-make guest-assets          # kernel, Firecracker, guest disk (first run: several minutes)
-sudo make install          # Node service + group corvus; log out/in or: newgrp corvus
-
-corvus status              # Node should be up; Isolation: ready
-corvus vm start
-corvus chat                # type a line, then /exit
-corvus stop                # shuts down the guest VM; Node stays up
+./install.sh
 ```
 
-`make check` lists missing tools or KVM before you bake a disk. After install, daily `vm` / `chat` / `stop` do **not** use sudo. If `corvus` says the Node service is not running, install was skipped or the service is down.
+Then:
+
+```bash
+corvus status
+corvus vm start
+corvus chat                # type a line, then /exit
+corvus stop
+```
+
+Re-run `./install.sh` anytime: steps that are already good print green **already up to date**. `./install.sh --yes` skips “press Enter”. `make check` still lists host gaps. `sudo make install` remains the inner privileged step after a bake.
+
+`corvus` lives at `$HOME/Corvus-Node/bin/corvus` (and `~/.local/bin/corvus` when that directory exists). Daily `vm` / `chat` / `stop` do **not** use sudo. If `corvus` says the Node service is not running, run `./install.sh` (or `sudo systemctl start corvus-node`).
 
 ### Daily commands
 
@@ -38,17 +41,17 @@ corvus stop                # shuts down the guest VM; Node stays up
 | `corvus stop` | Shut down the guest (`vm stop` is the same) |
 | `corvus vm status` | Guest only |
 | `corvus run --once "hello"` | One turn, then exit |
-| `corvus update` | Newer GitHub tag into the **installed** app (not this git tree) |
+| `corvus update` | Newer GitHub tag into `$HOME/Corvus-Node` (not this git tree) |
 
 Optional: `--tools echo` asks the stub for an Engine 1 echo after RBAC. `--workspace /path --tools file_read` lets Node read that live directory after RBAC. `corvus settings` stores launch rules under `$XDG_CONFIG_HOME/corvus-node/launch.json`. A running VM is not hot-patched; `stop` then `vm start` to apply new rules.
 
 ### If something fails
 
 - `make check` still prints `need` lines — install those packages, enable virtualization, run it again.
-- `corvus status` shows `Node: down` — `sudo make install` (or `sudo systemctl start corvus-node`).
-- `Isolation: not ready` — run `make guest-assets` from this checkout, then `sudo make install` again so assets land under `/var/lib/corvus-node`.
+- `corvus status` shows `Node: down` — `./install.sh` (or `sudo systemctl start corvus-node`).
+- `Isolation: not ready` — `./install.sh` again so hashed assets land under `$HOME/Corvus-Node/assets`.
 - `chat` / `vm` fail closed if Node is not running. That is intentional. There is no TCP mode.
-- Permission denied on the control socket — you are not in group `corvus` yet (`newgrp corvus`, or log out and back in).
+- Permission denied on the control socket — run `./install.sh` so it can enter group `corvus` in this terminal.
 
 More detail: [Operations](docs/planning/OPERATIONS.md).
 

@@ -3,7 +3,7 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
-To **install and run** Corvus-Node as an operator, start with [README.md](README.md) (`make check`, `make guest-assets`, `sudo make install`). This file is for people changing the code.
+To **install and run** Corvus-Node as an operator, start with [README.md](README.md) (`./install.sh`). This file is for people changing the code.
 
 ## Workflow
 
