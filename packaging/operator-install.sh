@@ -72,8 +72,9 @@ https://www.BlackRainLabs.com
                         GitHub release wheel (default with no git tree)
   ./install.sh --help   this text
 
-A git clone installs this checkout. An unpacked GitHub release installs
-that snapshot. --release always fetches the latest GitHub wheel.
+Users: unpack corvus-node-install.tar.gz from the GitHub Release, then
+./install.sh here. You do not clone the project. A git clone installs
+this checkout. --release always fetches the latest GitHub wheel.
 If Corvus is already installed, you can upgrade or keep the current
 version. Your password is only for setting up isolation. Chat is not root.
 The agent never gets an admin shell. After install, corvus just
