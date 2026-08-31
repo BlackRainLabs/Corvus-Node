@@ -83,7 +83,7 @@ Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus
 make guest-assets
 ```
 
-Writes a pinned Firecracker **v1.16.1** binary, **jailer**, CI kernel, and Debian bookworm ext4 to `.cache/corvus-node/` (gitignored). Kernel, VMM, and jailer are SHA-256 verified on fetch and again on every `corvus vm start` / `run`. Bake needs `curl` and `mkfs.ext4`, plus one of `mmdebstrap`, `debootstrap`, or `docker` for the rootfs (skipped if `rootfs.ext4` already exists unless `CORVUS_NODE_FORCE_ROOTFS=1`). After a guest runtime/tool change, refresh the Python payload without a Debian rebuild: `CORVUS_NODE_REFRESH_PAYLOAD=1 make guest-assets` (needs `debugfs`). After bake, `rootfs.ext4.sha256` is written beside the image.
+Writes a pinned Firecracker **v1.16.1** binary, **jailer**, CI kernel, and Debian bookworm ext4 to `.cache/corvus-node/` (gitignored). Kernel, VMM, and jailer are SHA-256 verified on fetch and again on every `corvus vm start` / `run`. Bake needs `curl` and `mkfs.ext4`, plus one of `mmdebstrap`, `debootstrap`, or `docker` for the rootfs (skipped if `rootfs.ext4` already exists unless `CORVUS_NODE_FORCE_ROOTFS=1`). `mmdebstrap` is invoked as tar-to-stdout so a `0700` unpack directory (`mktemp -d`) does not fail unshare with Permission denied. After a guest runtime/tool change, refresh the Python payload without a Debian rebuild: `CORVUS_NODE_REFRESH_PAYLOAD=1 make guest-assets` (needs `debugfs`). After bake, `rootfs.ext4.sha256` is written beside the image.
 
 Override paths with `CORVUS_NODE_KERNEL`, `CORVUS_NODE_ROOTFS`, `CORVUS_NODE_FIRECRACKER`, `CORVUS_NODE_JAILER`, and `CORVUS_NODE_CACHE`. Details: `guest/README.md`.
 

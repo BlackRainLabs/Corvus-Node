@@ -152,13 +152,30 @@ install_pydantic() {
     --platform "$PIP_PLATFORM" "pydantic>=2.9.0"
 }
 
+mmdebstrap_tmpdir() {
+  # unshare cannot use a 0700 TMPDIR (mktemp, pam_tmpdir). /tmp is 1777.
+  if [[ -d /tmp && -w /tmp ]]; then
+    printf '/tmp'
+    return 0
+  fi
+  if [[ -d /dev/shm && -w /dev/shm ]]; then
+    printf '/dev/shm'
+    return 0
+  fi
+  printf '/tmp'
+}
+
 populate_debian_tree() {
   local tree="$1"
   mkdir -p "$tree"
   if command -v mmdebstrap >/dev/null 2>&1; then
     echo "baking rootfs with mmdebstrap"
-    mmdebstrap --variant=minbase --include=python3 \
-      bookworm "$tree" http://deb.debian.org/debian
+    # Directory targets under a 0700 unpack (mktemp -d) are invisible to
+    # mmdebstrap unshare. Stream a tarball through a world-writable TMPDIR.
+    TMPDIR="$(mmdebstrap_tmpdir)" mmdebstrap --variant=minbase --include=python3 \
+      --format=tar bookworm - http://deb.debian.org/debian \
+      | tar -C "$tree" --exclude=./dev --exclude=./proc --exclude=./sys -xf -
+    mkdir -p "$tree/dev" "$tree/proc" "$tree/sys"
     return 0
   fi
   if command -v debootstrap >/dev/null 2>&1; then

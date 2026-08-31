@@ -29,7 +29,7 @@ Produces (gitignored):
 - `.cache/corvus-node/firecracker` — pinned Firecracker v1.16.1 binary
 - `.cache/corvus-node/jailer` — pinned jailer v1.16.1 binary
 
-Needs `curl`, `mkfs.ext4`, and one of `mmdebstrap`, `debootstrap`, or `docker` (rootfs bake is skipped if the ext4 already exists). Not a copy of a hypervisor overlay.
+Needs `curl`, `mkfs.ext4`, and one of `mmdebstrap`, `debootstrap`, or `docker` (rootfs bake is skipped if the ext4 already exists). Not a copy of a hypervisor overlay. `mmdebstrap` unshare cannot write into a `0700` unpack dir (`mktemp -d` under `/tmp`); bake streams a tarball via `/tmp` and extracts as the operator.
 
 Environment:
 
