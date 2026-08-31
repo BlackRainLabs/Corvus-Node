@@ -9,11 +9,11 @@
 
 # Corvus-Node Architecture Overview
 
-**Status:** Current — v0.1.8 Kubuntu install
+**Status:** Current — v0.1.9 start after stop
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
-## v0.1.8 graph (authoritative)
+## v0.1.9 graph (authoritative)
 
 ```
          CLI / GUI
@@ -43,15 +43,15 @@ These principles must be respected across all documents and code:
 5. **Launch-time immutability** — Tools and the workspace allowlist are selected at launch. Changing them requires a new microVM.
 6. **Host-owned memory** — Persistent memory lives on the host (Node). v1 is a `private` namespace for this one identity. Engine 4 is the guest client.
 7. **Full auditability of every hop** — Every message is logged with correlation ids. Audit is durable on the host (hash-chained JSONL), not in the guest and not in the jail instance dir.
-8. **4-engine model** — The Firecracker VM contains exactly four engines (tools, channels, LLM, memory). v0.1.8 still runs them in one guest process. `source_engine` is a claim; hop MAC does not authenticate a pwned guest.
+8. **4-engine model** — The Firecracker VM contains exactly four engines (tools, channels, LLM, memory). v0.1.9 still runs them in one guest process. `source_engine` is a claim; hop MAC does not authenticate a pwned guest.
 9. **Default deny, chat implicit** — RBAC is baked into Node. Basic LLM chat is allowed; anything else is an added rule or elevation. CLI writes rules; it does not skip the filter.
 10. **Hop integrity** — Host mints the hop key (`session_init`). Later vsock envelopes carry seq + HMAC bound to `vm_instance_id`. Mid-path alteration is dropped and flagged. HMAC does not prove user intent.
-11. **Jailer is the VMM path** — The Node **service** (`corvus serve`, systemd) requires root, jailer, KVM, and hashed kernel/rootfs/Firecracker/jailer. Install is `./install.sh` (sudo when needed) into `$HOME/Corvus-Node`; a git checkout installs that tree, `corvus update` is the GitHub release wheel. Jail chroots stay `/var/lib/corvus-node`. The operator CLI (`start` / `vm start` / `chat` / `vm stop`) talks to Node over host AF_UNIX and does not use sudo. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM). `vm start` starts the guest with no extra prompt. `vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`). No raw Firecracker. No TCP product mode.
+11. **Jailer is the VMM path** — The Node **service** (`corvus serve`, systemd) requires root, jailer, KVM, and hashed kernel/rootfs/Firecracker/jailer. Install is `./install.sh` (sudo when needed) into `$HOME/Corvus-Node`; a git checkout installs that tree, `corvus update` is the GitHub release wheel. Jail chroots stay `/var/lib/corvus-node`. The operator CLI (`start` / `vm start` / `chat` / `vm stop`) talks to Node over host AF_UNIX and does not use sudo. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM). `vm start` starts the guest with no extra prompt. `vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`). After `corvus stop`, start again with `corvus start` — not `./install.sh`. No raw Firecracker. No TCP product mode.
 12. **Slim guest** — The image contains protocol, runtime, tools, and the guest entry. Host Node, policy, LLM keys, audit, and launcher are not copied into the VM.
 
 ## Product
 
-Corvus-Node is a **single-agent** harness. v0.1.8 ships a guided installer (`./install.sh` from a checkout installs that tree; `corvus update` is the GitHub release wheel, CLI always, GUI extras if they install) and the **operator CLI** (`start` / `vm start` / `chat` / `gui` / `vm stop` / `status` / `settings` / `run --once` / `update`). `corvus gui` is a PySide6 splash on the same layer as the CLI: a thin client of Node. The splash does not talk to Node in this version. Node owns jailer, vsock, RBAC, and the control socket. The GUI team owns `gui/`; core publishes the socket contract in `docs/gui/AVAILABLE.md`. Social gateways (Telegram, WhatsApp) identify principals on Node later. A fleet control plane is Corvus Hypervisor — later, not a box in this graph. Host-root / SEV-SNP is out of scope: if the box is owned, RAM dumps win.
+Corvus-Node is a **single-agent** harness. v0.1.9 ships a guided installer (`./install.sh` from a checkout installs that tree; `corvus update` is the GitHub release wheel, CLI always, GUI extras if they install) and the **operator CLI** (`start` / `vm start` / `chat` / `gui` / `vm stop` / `status` / `settings` / `run --once` / `update`). `corvus gui` is a PySide6 splash on the same layer as the CLI: a thin client of Node. The splash does not talk to Node in this version. Node owns jailer, vsock, RBAC, and the control socket. The GUI team owns `gui/`; core publishes the socket contract in `docs/gui/AVAILABLE.md`. Social gateways (Telegram, WhatsApp) identify principals on Node later. A fleet control plane is Corvus Hypervisor — later, not a box in this graph. Host-root / SEV-SNP is out of scope: if the box is owned, RAM dumps win.
 
 Allowed workspaces are attached to **Node**. `--workspace /path` is a live host directory Node may read and write after RBAC. File tools use `/workspace` paths that Node maps onto that tree. The rest of the host is invisible. The guest does not mount the host folder.
 

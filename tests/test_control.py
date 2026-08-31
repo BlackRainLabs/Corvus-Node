@@ -9,10 +9,13 @@ from pathlib import Path
 import pytest
 
 from corvus_node.node.control import (
+    INSTALL_HINT,
+    START_HINT,
     ControlClient,
     ControlError,
     decode_frame,
     encode_frame,
+    not_running_hint,
     product_prefix,
     runtime_dir,
 )
@@ -62,7 +65,37 @@ def test_chat_user_agent_rpc(fake_node: object) -> None:
         assert client.read()["type"] == "waiting"
 
 
+def test_not_running_hint_install_when_runtime_is_not_product(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    assert not_running_hint() == INSTALL_HINT
+
+
+def test_not_running_hint_start_when_installed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    prefix = tmp_path / "Corvus-Node"
+    (prefix / "run").mkdir(parents=True)
+    (prefix / "env").write_text("export CORVUS_NODE_PREFIX\n")
+    monkeypatch.setenv("CORVUS_NODE_PREFIX", str(prefix))
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(prefix / "run"))
+    assert not_running_hint() == START_HINT
+
+
 def test_client_missing_socket(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path / "empty"))
-    with pytest.raises(ControlError, match="not running"):
+    with pytest.raises(ControlError, match="install.sh"):
+        ControlClient().connect()
+
+
+def test_client_missing_socket_says_start_when_installed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prefix = tmp_path / "Corvus-Node"
+    (prefix / "run").mkdir(parents=True)
+    (prefix / "env").write_text("export CORVUS_NODE_PREFIX\n")
+    monkeypatch.setenv("CORVUS_NODE_PREFIX", str(prefix))
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(prefix / "run"))
+    with pytest.raises(ControlError, match="corvus start"):
         ControlClient().connect()

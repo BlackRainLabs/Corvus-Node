@@ -11,7 +11,7 @@
 
 The operator GUI is a thin client of **Node**, same layer as `corvus`. It talks only over the host **AF_UNIX** control socket (`0660`, group `corvus`). It does not talk to Firecracker, vsock, or guest engines.
 
-v0.1.8 splash (`corvus gui`) does **not** call Node. This list is the contract for later GUI work. A verb that is not here stays fail-closed.
+v0.1.9 splash (`corvus gui`) does **not** call Node. This list is the contract for later GUI work. A verb that is not here stays fail-closed.
 
 GUI agents must not edit Node, guest, jailer, or RBAC. Ask for a surface in [gui/REQUESTS.md](../../gui/REQUESTS.md). Core ships it here or rejects it.
 

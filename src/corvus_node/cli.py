@@ -20,6 +20,7 @@ from corvus_node.node.control import (
     ControlClient,
     ControlError,
     node_pid,
+    not_running_hint,
     product_prefix,
     runtime_dir,
 )
@@ -234,7 +235,7 @@ def _status(*, brief: bool = False) -> int:
     for line in format_runtime_status(pid, snap, error=error):
         print(line)
     if pid is None:
-        print(f"Hint: {INSTALL_HINT}")
+        print(f"Hint: {not_running_hint()}")
     if brief:
         return 0
     print()
@@ -274,7 +275,7 @@ def _vm_status() -> int:
     pid = node_pid()
     if pid is None:
         print("VM: (none)")
-        print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
+        print(f"corvus: {not_running_hint()}", file=sys.stderr)
         return 2
     try:
         snap = rpc_status()
@@ -349,8 +350,6 @@ def _start(merged: LaunchSettings) -> int:
                 return _launch_errors(boot)
         else:
             print(f"corvus: {exc}", file=sys.stderr)
-            if exc.code == "not_running":
-                print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
             return 2
     print("corvus: agent started", file=sys.stderr)
     return 0
@@ -411,7 +410,7 @@ def _run_once(text: str, merged: LaunchSettings) -> int:
         return _run_once_via_node(text, merged)
     smoke = os.environ.get("CORVUS_NODE_SMOKE", "").strip() == "1"
     if os.geteuid() != 0 or not smoke:
-        print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
+        print(f"corvus: {not_running_hint()}", file=sys.stderr)
         return 2
     config = _config(merged, once=True, user_text=text)
     try:
@@ -555,8 +554,7 @@ def _print_product_stop_explain(*, vm_up: bool, systemd: bool) -> None:
             "     Chat will not work until it is started again.",
             file=sys.stderr,
         )
-        print("Start again with: ./install.sh", file=sys.stderr)
-        print("  (or sudo systemctl start corvus-node)", file=sys.stderr)
+        print("Start again with: corvus start", file=sys.stderr)
         print(
             "A password may be asked because isolation is a system job.",
             file=sys.stderr,
@@ -702,7 +700,7 @@ def _execute_product_stop() -> int:
 def _vm_stop(*, yes: bool) -> int:
     pid = node_pid()
     if pid is None:
-        print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
+        print(f"corvus: {not_running_hint()}", file=sys.stderr)
         return 2
     running = _vm_is_running(pid)
     _print_vm_stop_explain(running=running)

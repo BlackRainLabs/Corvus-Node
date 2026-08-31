@@ -4,6 +4,34 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - v0.1.9 start after stop
+
+**Documents Modified:**
+- `pyproject.toml`, `src/corvus_node/__init__.py`, `README.md`
+- `AGENTS.md`, `SECURITY.md`, `docs/architecture/OVERVIEW.md`, `docs/architecture/POLICY.md`
+- `docs/gui/AVAILABLE.md`, `docs/planning/ROADMAP.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Version **0.1.9**. v0.1.8 is already published. Operators get a new Release so `corvus stop` says `corvus start`, not `./install.sh`.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - corvus stop starts again with corvus start
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `src/corvus_node/node/control.py`
+- `tests/test_cli.py`, `tests/test_control.py`
+- `README.md`, `AGENTS.md`, `docs/architecture/OVERVIEW.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- After `corvus stop`, the CLI told operators to re-run `./install.sh`. Install is already done. Start again with `corvus start`. If Node is down after an install, `status` / `chat` / `vm` say the same.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - v0.1.8 Kubuntu install
 
 **Documents Modified:**
@@ -105,7 +133,7 @@
 
 **Key Changes:**
 - `corvus gui` splash is animated (fade, chrome pulse, scan) and lasts about 8 seconds (`CORVUS_NODE_GUI_MS` still overrides for tests).
-- GitHub Releases are immutable: one version string, one wheel. Merge PRs at the current version. Bump (`0.1.8`, …) only when operators should get a new Release. `corvus update` and `./install.sh --release` compare version numbers. Contributors use `./install.sh` from the clone for unreleased `main`.
+- GitHub Releases are immutable: one version string, one wheel. Merge PRs at the current version. Bump (`0.1.9`, …) only when operators should get a new Release. `corvus update` and `./install.sh --release` compare version numbers. Contributors use `./install.sh` from the clone for unreleased `main`.
 
 **Reviewed By:** Black Rain Labs - R&D
 

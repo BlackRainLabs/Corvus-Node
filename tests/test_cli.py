@@ -379,6 +379,16 @@ def test_stop_shuts_down_guest_and_node(
     assert "shut Corvus-Node down" in err
     assert "agent session ended" in err
     assert "Corvus-Node stopped" in err
+    assert "install.sh" not in err
+
+
+def test_product_stop_explain_says_corvus_start(capsys: pytest.CaptureFixture[str]) -> None:
+    from corvus_node.cli import _print_product_stop_explain
+
+    _print_product_stop_explain(vm_up=True, systemd=True)
+    err = capsys.readouterr().err
+    assert "corvus start" in err
+    assert "install.sh" not in err
 
 
 def test_stop_cancelled(
