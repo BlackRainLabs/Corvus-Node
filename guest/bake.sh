@@ -11,6 +11,10 @@ ROOTFS_OUT="${CORVUS_NODE_ROOTFS:-$CACHE/rootfs.ext4}"
 ARCH="$(uname -m)"
 IMAGE_MIB="${CORVUS_NODE_ROOTFS_MIB:-768}"
 
+# Debian archive keys so Ubuntu/Kubuntu can verify bookworm (host apt is Ubuntu).
+DEB_KEYRING_DEB_URL="https://deb.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb"
+DEB_KEYRING_DEB_SHA256="9ea7778e443144ca490668737a8ab22dd3e748bb99e805e22ec055abeb3c7fac"
+
 KERNEL_BASE="https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.13"
 FC_VERSION="v1.16.1"
 FC_OUT="${CORVUS_NODE_FIRECRACKER:-$CACHE/firecracker}"
@@ -165,22 +169,115 @@ mmdebstrap_tmpdir() {
   printf '/tmp'
 }
 
+extract_deb() {
+  local deb="$1"
+  local dest="$2"
+  mkdir -p "$dest"
+  if command -v dpkg-deb >/dev/null 2>&1; then
+    dpkg-deb -x "$deb" "$dest"
+    return 0
+  fi
+  python3 - "$deb" "$dest" <<'PY'
+import io
+import sys
+import tarfile
+from pathlib import Path
+
+raw = Path(sys.argv[1]).read_bytes()
+dest = Path(sys.argv[2])
+if raw[:8] != b"!<arch>\n":
+    raise SystemExit("not a .deb")
+off = 8
+blob = None
+name = ""
+while off + 60 <= len(raw):
+    hdr = raw[off : off + 60]
+    off += 60
+    fname = hdr[0:16].decode("ascii", "replace").strip().rstrip("/")
+    size_s = hdr[48:58].decode("ascii").strip()
+    if not size_s:
+        break
+    size = int(size_s)
+    data = raw[off : off + size]
+    off += size + (size % 2)
+    if fname.startswith("data.tar"):
+        blob = data
+        name = fname
+        break
+if blob is None:
+    raise SystemExit("no data.tar in .deb")
+if name.endswith("xz"):
+    mode = "r:xz"
+elif "gz" in name:
+    mode = "r:gz"
+else:
+    mode = "r:*"
+with tarfile.open(fileobj=io.BytesIO(blob), mode=mode) as tf:
+    tf.extractall(dest)
+PY
+}
+
+debian_keyring_for_unshare() {
+  # Ubuntu apt keys do not sign Debian bookworm. Pin Debian's keyring and
+  # copy it to a world-readable TMPDIR so mmdebstrap unshare can open it.
+  local deb="$CACHE/debian-archive-keyring_2025.1_all.deb"
+  local cached="$CACHE/debian-archive-keyring.pgp"
+  local extract tmp src pub
+  if [[ ! -f "$deb" ]] || ! require_hash "$deb" "$DEB_KEYRING_DEB_SHA256" "debian-archive-keyring"; then
+    tmp="$(mktemp "$CACHE/debian-archive-keyring.XXXXXX")"
+    echo "fetching Debian archive keyring (Ubuntu/Kubuntu cannot verify bookworm without it)"
+    curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$DEB_KEYRING_DEB_URL"
+    if ! require_hash "$tmp" "$DEB_KEYRING_DEB_SHA256" "debian-archive-keyring"; then
+      rm -f "$tmp"
+      exit 1
+    fi
+    mv "$tmp" "$deb"
+    rm -f "$cached"
+  fi
+  if [[ ! -f "$cached" ]]; then
+    extract="$(mktemp -d "$CACHE/keyring-extract.XXXXXX")"
+    extract_deb "$deb" "$extract"
+    src="$extract/usr/share/keyrings/debian-archive-keyring.pgp"
+    if [[ ! -f "$src" ]]; then
+      src="$extract/usr/share/keyrings/debian-archive-keyring.gpg"
+    fi
+    if [[ ! -e "$src" ]]; then
+      echo "guest/bake.sh: debian-archive-keyring.gpg missing from Debian package" >&2
+      rm -rf "$extract"
+      exit 1
+    fi
+    cp -L "$src" "$cached"
+    chmod 644 "$cached"
+    rm -rf "$extract"
+  fi
+  pub="$(mmdebstrap_tmpdir)/corvus-debian-archive-keyring.pgp"
+  cp "$cached" "$pub"
+  chmod 644 "$pub"
+  printf '%s' "$pub"
+}
+
 populate_debian_tree() {
   local tree="$1"
   mkdir -p "$tree"
   if command -v mmdebstrap >/dev/null 2>&1; then
     echo "baking rootfs with mmdebstrap"
+    local keyring tarout
+    keyring="$(debian_keyring_for_unshare)"
+    tarout="$(mktemp "$CACHE/rootfs.tar.XXXXXX")"
     # Directory targets under a 0700 unpack (mktemp -d) are invisible to
-    # mmdebstrap unshare. Stream a tarball through a world-writable TMPDIR.
+    # mmdebstrap unshare. Write a tarball, then extract as the operator.
     TMPDIR="$(mmdebstrap_tmpdir)" mmdebstrap --variant=minbase --include=python3 \
-      --format=tar bookworm - http://deb.debian.org/debian \
-      | tar -C "$tree" --exclude=./dev --exclude=./proc --exclude=./sys -xf -
+      --format=tar bookworm "$tarout" \
+      "deb [signed-by=${keyring}] http://deb.debian.org/debian bookworm main"
+    tar -C "$tree" --exclude=./dev --exclude=./proc --exclude=./sys -xf "$tarout"
+    rm -f "$tarout"
     mkdir -p "$tree/dev" "$tree/proc" "$tree/sys"
     return 0
   fi
   if command -v debootstrap >/dev/null 2>&1; then
     echo "baking rootfs with debootstrap"
     debootstrap --variant=minbase --include=python3 \
+      --keyring="$(debian_keyring_for_unshare)" \
       bookworm "$tree" http://deb.debian.org/debian
     return 0
   fi
