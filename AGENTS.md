@@ -19,7 +19,7 @@
 2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`.
 
 3. **Changelog is Mandatory**:
-   - Every change must be recorded in root `CHANGES.md` with proper format and date.
+   - Every change must be recorded in root `CHANGES.md` with proper format and today's date.
 
 4. **Per-version runnable CLI**:
    - Each version ships a working operator CLI. `--help` and `status` describe **this build** (what runs, what is not in this version).
@@ -30,6 +30,7 @@
    - `corvus update` is for the **installed** app vs GitHub **releases** (wheel into `$HOME/Corvus-Node/venv`, not a git clone). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then installs, then starts Node again. `--yes` skips the prompts. It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.6` while GitHub is still `0.1.5`).
    - `./install.sh` from a git checkout (or an unpacked snapshot with `src/`) installs **this tree**. `--release`, or no local source, uses the GitHub release wheel. The installer does not announce a newer GitHub version; `corvus status` / `corvus update` do. Live KVM tests (`make smoke`) need that installed Node. `make test` does not. After clone changes, run `./install.sh` again before smoke.
    - **Every new version is a GitHub Release.** Bump `pyproject.toml`, `src/corvus_node/__init__.py`, and README together. Merge to `main`; `.github/workflows/release.yml` publishes `vX.Y.Z` (wheel + install tarball) if that version is not released yet. Do not ship a version string without that Release.
+   - **Real timestamps.** Never `export GIT_AUTHOR_DATE` or `GIT_COMMITTER_DATE` (including when rewriting a commit). Unset them if they are already in the environment. GitHub lists files by author date. Commits, `CHANGES.md`, docs **Last Updated**, and GitHub Releases use the wall clock. `make test` refuses those variables.
 
 5. **Runtime Agent Workflow**:
    - `AGENT-WORKFLOW.md` is binding for guest behavior.
@@ -40,7 +41,7 @@
    - **Stub first:** a new tool or guest-visible LLM behavior is not done until `StubLlm` can exercise it and `make test` covers it. The stub is deterministic (keywords + allowlist), not a provider. Add a case in `tests/test_stub.py`. Live KVM smoke is `make smoke` against the installed Node (`CORVUS_NODE_SMOKE=1`, no sudo).
 
 6. **Documentation Standards**:
-   - Update "Last Updated" dates.
+   - Update "Last Updated" to today's date.
    - Maintain Related Documents and "Must Update on Change: CHANGES.md".
    - Avoid `---` YAML frontmatter separators on docs.
 
