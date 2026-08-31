@@ -4,6 +4,18 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - bake sources.list stays valid on Ubuntu
+
+**Documents Modified:**
+- `guest/bake.sh`, `tests/test_bake.py`, `guest/README.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- mmdebstrap wrote a malformed `sources.list` (`[option] not assignment`) when the keyring path was mixed with a log line and when `signed-by` was in the mirror URI. Fetch logs go to stderr. Bake uses `--keyring` and `copy-in`, with a plain Debian mirror.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - bake verifies Debian bookworm on Ubuntu/Kubuntu
 
 **Documents Modified:**

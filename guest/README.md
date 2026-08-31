@@ -29,7 +29,7 @@ Produces (gitignored):
 - `.cache/corvus-node/firecracker` — pinned Firecracker v1.16.1 binary
 - `.cache/corvus-node/jailer` — pinned jailer v1.16.1 binary
 
-Needs `curl`, `mkfs.ext4`, and one of `mmdebstrap`, `debootstrap`, or `docker` (rootfs bake is skipped if the ext4 already exists). Not a copy of a hypervisor overlay. `mmdebstrap` unshare cannot write into a `0700` unpack dir (`mktemp -d` under `/tmp`); bake writes a tarball via `/tmp` and extracts as the operator. Ubuntu/Kubuntu apt keys do not sign Debian bookworm; bake pins `debian-archive-keyring` 2025.1 and passes it as `signed-by`.
+Needs `curl`, `mkfs.ext4`, and one of `mmdebstrap`, `debootstrap`, or `docker` (rootfs bake is skipped if the ext4 already exists). Not a copy of a hypervisor overlay. `mmdebstrap` unshare cannot write into a `0700` unpack dir (`mktemp -d` under `/tmp`); bake writes a tarball via `/tmp` and extracts as the operator. Ubuntu/Kubuntu apt keys do not sign Debian bookworm; bake pins `debian-archive-keyring` 2025.1 and passes it with `--keyring` / `copy-in`.
 
 Environment:
 
