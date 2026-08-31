@@ -26,8 +26,10 @@ def test_parse_version() -> None:
 
 
 def test_github_install_ref() -> None:
-    assert github_install_ref("0.1.5").endswith("@v0.1.5")
-    assert "BlackRainLabs/Corvus-Node" in github_install_ref("v0.1.5")
+    ref = github_install_ref("0.1.5")
+    assert ref.endswith("corvus_node-0.1.5-py3-none-any.whl")
+    assert "releases/download/v0.1.5/" in github_install_ref("v0.1.5")
+    assert "BlackRainLabs/Corvus-Node" in ref
 
 
 def test_fetch_skipped_when_env_set() -> None:
@@ -51,6 +53,7 @@ def test_check_version_unreleased_does_not_offer_update() -> None:
             "not on github",
             "skipped",
             "no github tags",
+            "no github release",
         )
     )
 
@@ -116,10 +119,10 @@ def test_fetch_github_empty_tags_is_not_unreachable(
     monkeypatch.setattr("corvus_node.node.update.urllib.request.urlopen", lambda *a, **k: _Resp())
     monkeypatch.setattr("corvus_node.node.update.local_unreleased", lambda _g: False)
     monkeypatch.setattr("corvus_node.node.update.is_source_checkout", lambda: False)
-    assert fetch_github_lookup() == (None, "no GitHub tags yet")
+    assert fetch_github_lookup() == (None, "no GitHub release yet")
     status = check_version()
     assert status.update_available is False
-    assert status.reason == "no GitHub tags yet"
+    assert status.reason == "no GitHub release yet"
     assert "unreachable" not in status.reason
 
 

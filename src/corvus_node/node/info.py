@@ -27,7 +27,8 @@ HELP_EPILOG = (
     "vm start / chat / vm stop talk to the isolated agent. Corvus stays ready "
     "in the background after vm stop. corvus stop shuts the agent and Corvus down "
     "(asks first). chat lasts until /exit. "
-    "corvus update installs a newer release (stops Corvus first if it is running)."
+    "corvus update installs a newer GitHub release "
+    "(stops Corvus first if it is running; asks before replacing)."
 )
 
 

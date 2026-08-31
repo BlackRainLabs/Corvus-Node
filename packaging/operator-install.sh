@@ -7,6 +7,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GROUP="${CORVUS_NODE_GROUP:-corvus}"
 YES=0
 DRY=0
+FORCE_RELEASE=0
+FORCE_LOCAL=0
 if [[ "${CORVUS_NODE_INSTALL_YES:-}" == "1" ]]; then
   YES=1
 fi
@@ -17,6 +19,8 @@ fi
 for arg in "$@"; do
   case "$arg" in
     --yes | -y) YES=1 ;;
+    --release) FORCE_RELEASE=1 ;;
+    --local) FORCE_LOCAL=1 ;;
     --help | -h)
       # printed below via usage
       YES=1
@@ -30,6 +34,11 @@ for arg in "$@"; do
 done
 
 SHOW_HELP="${SHOW_HELP:-0}"
+
+if [[ "$FORCE_RELEASE" -eq 1 && "$FORCE_LOCAL" -eq 1 ]]; then
+  echo "corvus: use --release or --local, not both" >&2
+  exit 2
+fi
 
 USE_COLOR=0
 if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
@@ -57,12 +66,18 @@ Corvus-Node installer — Black Rain Labs
 https://www.BlackRainLabs.com
 
   ./install.sh          install (your user; password only when needed)
-  ./install.sh --yes    no “press Enter”; also confirm stopping Corvus if it is up
+  ./install.sh --yes    no “press Enter”; also confirm stop/upgrade if asked
+  ./install.sh --local  this directory (default when it is a git checkout)
+  ./install.sh --release
+                        GitHub release wheel (default with no git tree)
   ./install.sh --help   this text
 
-Your password is only for setting up isolation. Chat is not root. The
-agent never gets an admin shell. After install, corvus just works in
-this terminal — you do not type extra group commands.
+A git clone installs this checkout. An unpacked GitHub release installs
+that snapshot. --release always fetches the latest GitHub wheel.
+If Corvus is already installed, you can upgrade or keep the current
+version. Your password is only for setting up isolation. Chat is not root.
+The agent never gets an admin shell. After install, corvus just
+works in this terminal — you do not type extra group commands.
 EOF
 }
 
@@ -279,6 +294,68 @@ installed_version() {
 
 tree_version() {
   grep -m1 '^version =' "$ROOT/pyproject.toml" | cut -d'"' -f2
+}
+
+is_git_checkout() {
+  [[ -e "$ROOT/.git" ]]
+}
+
+has_local_tree() {
+  [[ -f "$ROOT/pyproject.toml" && -d "$ROOT/src/corvus_node" ]]
+}
+
+install_source() {
+  if [[ "$FORCE_RELEASE" -eq 1 ]]; then
+    echo release
+  elif [[ "$FORCE_LOCAL" -eq 1 ]]; then
+    echo local
+  elif is_git_checkout; then
+    echo local
+  elif has_local_tree; then
+    echo local
+  else
+    echo release
+  fi
+}
+
+github_release_lookup() {
+  python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+url = os.environ.get("CORVUS_NODE_VERSION_URL", "").strip() or (
+    "https://api.github.com/repos/BlackRainLabs/Corvus-Node/releases/latest"
+)
+req = urllib.request.Request(url, headers={"User-Agent": "corvus"})
+try:
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+except Exception:
+    sys.exit(1)
+tag = ""
+wheel = ""
+if isinstance(data, dict):
+    tag = str(data.get("tag_name") or "").lstrip("vV")
+    for asset in data.get("assets") or []:
+        if not isinstance(asset, dict):
+            continue
+        name = str(asset.get("name") or "")
+        if name.endswith(".whl") and "corvus_node" in name:
+            wheel = str(asset.get("browser_download_url") or "")
+            break
+if not tag:
+    sys.exit(1)
+if not wheel:
+    wheel = (
+        "https://github.com/BlackRainLabs/Corvus-Node/releases/download/"
+        f"v{tag}/corvus_node-{tag}-py3-none-any.whl"
+    )
+print(tag)
+print(wheel)
+PY
 }
 
 source_newer_than_install() {
@@ -522,8 +599,83 @@ fi
 
 echo
 echo "${C_BOLD}Corvus ($(prefix_path))${C_RST}"
+SOURCE="$(install_source)"
+PIP_SRC="$ROOT"
+WANT_VER=""
+if [[ "$SOURCE" == "local" ]]; then
+  if ! has_local_tree; then
+    need "this directory has no Corvus source (need pyproject.toml and src/corvus_node)"
+    exit 1
+  fi
+  WANT_VER="$(tree_version)"
+  if is_git_checkout; then
+    ok "install from this git checkout ($WANT_VER)"
+  else
+    ok "install from this directory ($WANT_VER)"
+  fi
+else
+  if [[ "$DRY" -eq 1 ]]; then
+    WANT_VER="$(tree_version 2>/dev/null || echo release)"
+    doing "would install from GitHub release"
+  else
+    doing "look up GitHub release"
+    mapfile -t REL < <(github_release_lookup || true)
+    WANT_VER="${REL[0]:-}"
+    WHEEL_URL="${REL[1]:-}"
+    if [[ -z "$WANT_VER" || -z "$WHEEL_URL" ]]; then
+      need "no GitHub release yet. From a git clone, ./install.sh uses this checkout."
+      exit 1
+    fi
+    CACHE="${CORVUS_NODE_CACHE:-$ROOT/.cache/corvus-node}"
+    mkdir -p "$CACHE"
+    PIP_SRC="$CACHE/corvus_node-${WANT_VER}.whl"
+    doing "download GitHub release $WANT_VER"
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "$PIP_SRC" "$WHEEL_URL"; then
+      need "could not download $WHEEL_URL"
+      exit 1
+    fi
+    ok "install from GitHub release $WANT_VER"
+  fi
+fi
+
+HAVE_VER="$(installed_version || true)"
+UNIT="/etc/systemd/system/corvus-node.service"
+NEED_NODE=0
+if [[ "$HAVE_VER" != "$WANT_VER" ]]; then
+  NEED_NODE=1
+fi
+if [[ ! -f "$UNIT" ]]; then
+  NEED_NODE=1
+fi
+if [[ ! -f "$(prefix_path)/env" ]]; then
+  NEED_NODE=1
+fi
+if [[ "$SOURCE" == "local" ]] && source_newer_than_install; then
+  NEED_NODE=1
+fi
+
+if [[ -n "$HAVE_VER" && -f "$UNIT" && -f "$(prefix_path)/env" && "$NEED_NODE" -eq 1 ]]; then
+  cat <<EOF
+${C_BOLD}Upgrade or keep${C_RST}
+
+  Installed:  ${HAVE_VER}
+  This run:   ${WANT_VER} ($SOURCE)
+
+  Upgrade replaces the install. No keeps ${HAVE_VER}.
+
+EOF
+  if [[ "$DRY" -eq 1 ]]; then
+    doing "would ask upgrade or keep"
+  elif confirm_yes "Upgrade the install? No keeps ${HAVE_VER}."; then
+    :
+  else
+    skip "keeping Corvus $HAVE_VER"
+    NEED_NODE=0
+  fi
+fi
+
 STOPPED_LIVE=0
-if node_live; then
+if [[ "$NEED_NODE" -eq 1 ]] && node_live; then
   cat <<EOF
 ${C_BOLD}Corvus is already running${C_RST}
 
@@ -550,33 +702,22 @@ EOF
     need "install cancelled; Corvus is still running"
     exit 2
   fi
+elif node_live; then
+  skip "Corvus is running (keeping current version)"
 else
   skip "Corvus is not running"
 fi
 
-WANT_VER="$(tree_version)"
-HAVE_VER="$(installed_version || true)"
-UNIT="/etc/systemd/system/corvus-node.service"
-NEED_NODE=0
-if [[ "$HAVE_VER" != "$WANT_VER" ]]; then
-  NEED_NODE=1
-fi
-if [[ ! -f "$UNIT" ]]; then
-  NEED_NODE=1
-fi
-if [[ ! -f "$(prefix_path)/env" ]]; then
-  NEED_NODE=1
-fi
-if source_newer_than_install; then
-  NEED_NODE=1
-fi
 if [[ "$NEED_NODE" -eq 0 ]]; then
   skip "Corvus $WANT_VER at $(prefix_path)"
 else
   doing "install Corvus into $(prefix_path)"
   pause
   export CORVUS_NODE_PREFIX="${CORVUS_NODE_PREFIX:-$(prefix_path)}"
-  with_spin "install Node" run_sudo env CORVUS_NODE_PREFIX="$CORVUS_NODE_PREFIX" bash "$ROOT/packaging/install.sh"
+  with_spin "install Node" run_sudo env \
+    CORVUS_NODE_PREFIX="$CORVUS_NODE_PREFIX" \
+    CORVUS_NODE_PIP_SRC="$PIP_SRC" \
+    bash "$ROOT/packaging/install.sh"
   ok "Corvus $WANT_VER"
   if [[ "$DRY" -eq 0 ]] && ! wait_corvus_up; then
     need "Corvus did not come up after install; sudo systemctl status corvus-node"

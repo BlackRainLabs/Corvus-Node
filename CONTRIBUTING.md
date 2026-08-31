@@ -3,7 +3,7 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
-To **install and run** Corvus, start with [README.md](README.md) (`./install.sh`). This file is for people changing the code.
+To **install and run** Corvus, start with [README.md](README.md). `./install.sh` from this clone installs **this tree**. Users of an installed app use `corvus update` (GitHub release wheel). This file is for people changing the code.
 
 Operator-facing copy (README, `./install.sh`, `corvus --help`) stays plain language. Isolation rules, Firecracker/jailer, and the four-engine model live in `docs/architecture/`.
 

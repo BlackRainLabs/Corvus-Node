@@ -18,7 +18,7 @@ from corvus_node import __version__
 
 GITHUB_REPO = "BlackRainLabs/Corvus-Node"
 DEFAULT_TAGS_URL = f"https://api.github.com/repos/{GITHUB_REPO}/tags"
-INSTALL_REF = f"git+https://github.com/{GITHUB_REPO}.git"
+DEFAULT_RELEASE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
 @dataclass(frozen=True)
@@ -83,17 +83,13 @@ def local_unreleased(github: str | None) -> bool:
     return False
 
 
-def fetch_github_lookup(*, timeout: float = 3.0) -> tuple[str | None, str]:
-    """Latest tag and a reason when there is none (skip, no tags, or unreachable)."""
-    if os.environ.get("CORVUS_NODE_SKIP_UPDATE_CHECK", "").strip() == "1":
-        return None, "version check skipped"
-    url = os.environ.get("CORVUS_NODE_VERSION_URL", "").strip() or DEFAULT_TAGS_URL
+def _http_json(url: str, *, timeout: float) -> object:
     req = urllib.request.Request(url, headers={"User-Agent": "corvus"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
-        return None, "GitHub unreachable"
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _versions_from_payload(data: object) -> list[str]:
     names: list[str] = []
     if isinstance(data, dict) and data.get("tag_name"):
         names.append(str(data["tag_name"]))
@@ -101,9 +97,31 @@ def fetch_github_lookup(*, timeout: float = 3.0) -> tuple[str | None, str]:
         for entry in data:
             if isinstance(entry, dict) and entry.get("name"):
                 names.append(str(entry["name"]))
-    if not names:
-        return None, "no GitHub tags yet"
-    return max(names, key=parse_version).lstrip("vV"), ""
+    return names
+
+
+def fetch_github_lookup(*, timeout: float = 3.0) -> tuple[str | None, str]:
+    """Latest GitHub release (then tags) and a reason when there is none."""
+    if os.environ.get("CORVUS_NODE_SKIP_UPDATE_CHECK", "").strip() == "1":
+        return None, "version check skipped"
+    override = os.environ.get("CORVUS_NODE_VERSION_URL", "").strip()
+    urls = [override] if override else [DEFAULT_RELEASE_URL, DEFAULT_TAGS_URL]
+    last_error = "GitHub unreachable"
+    for url in urls:
+        try:
+            data = _http_json(url, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                last_error = "no GitHub release yet"
+                continue
+            return None, "GitHub unreachable"
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
+            return None, "GitHub unreachable"
+        names = _versions_from_payload(data)
+        if names:
+            return max(names, key=parse_version).lstrip("vV"), ""
+        last_error = "no GitHub release yet"
+    return None, last_error
 
 
 def fetch_github_version(*, timeout: float = 3.0) -> str | None:
@@ -141,7 +159,7 @@ def check_version() -> VersionStatus:
             github,
             "release",
             True,
-            f"GitHub {github} is newer; corvus update",
+            f"GitHub release {github} is newer; corvus update",
         )
     return VersionStatus(local, github, "release", False, "up to date with GitHub")
 
@@ -157,4 +175,9 @@ def format_version_status(status: VersionStatus) -> str:
 
 
 def github_install_ref(tag: str) -> str:
-    return f"{INSTALL_REF}@v{tag.lstrip('vV')}"
+    """Wheel on the GitHub Release for this tag (not a git clone)."""
+    ver = tag.lstrip("vV")
+    return (
+        f"https://github.com/{GITHUB_REPO}/releases/download/v{ver}/"
+        f"corvus_node-{ver}-py3-none-any.whl"
+    )
