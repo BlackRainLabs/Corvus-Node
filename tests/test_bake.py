@@ -21,7 +21,12 @@ def test_mmdebstrap_streams_tar_via_world_writable_tmp() -> None:
     )[0]
     assert 'bookworm "$tree"' not in mm_block
     assert "--format=tar" in mm_block
-    assert "signed-by=" in mm_block
+    assert "--keyring=" in mm_block
+    assert "copy-in" in mm_block
+    assert "signed-by=" not in mm_block
+    assert "fetching Debian archive keyring" in text
+    assert 'echo "fetching Debian archive keyring' in text
+    assert ">&2" in text.split("fetching Debian archive keyring", 1)[1][:80]
 
 
 def test_bake_pins_debian_archive_keyring() -> None:

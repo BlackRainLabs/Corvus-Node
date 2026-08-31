@@ -225,7 +225,7 @@ debian_keyring_for_unshare() {
   local extract tmp src pub
   if [[ ! -f "$deb" ]] || ! require_hash "$deb" "$DEB_KEYRING_DEB_SHA256" "debian-archive-keyring"; then
     tmp="$(mktemp "$CACHE/debian-archive-keyring.XXXXXX")"
-    echo "fetching Debian archive keyring (Ubuntu/Kubuntu cannot verify bookworm without it)"
+    echo "fetching Debian archive keyring (Ubuntu/Kubuntu cannot verify bookworm without it)" >&2
     curl -fL --retry 3 --retry-delay 2 -o "$tmp" "$DEB_KEYRING_DEB_URL"
     if ! require_hash "$tmp" "$DEB_KEYRING_DEB_SHA256" "debian-archive-keyring"; then
       rm -f "$tmp"
@@ -250,7 +250,7 @@ debian_keyring_for_unshare() {
     chmod 644 "$cached"
     rm -rf "$extract"
   fi
-  pub="$(mmdebstrap_tmpdir)/corvus-debian-archive-keyring.pgp"
+  pub="$(mmdebstrap_tmpdir)/corvus-debian-archive-keyring.gpg"
   cp "$cached" "$pub"
   chmod 644 "$pub"
   printf '%s' "$pub"
@@ -266,9 +266,12 @@ populate_debian_tree() {
     tarout="$(mktemp "$CACHE/rootfs.tar.XXXXXX")"
     # Directory targets under a 0700 unpack (mktemp -d) are invisible to
     # mmdebstrap unshare. Write a tarball, then extract as the operator.
+    # Do not put signed-by in the mirror line: mmdebstrap would copy it
+    # into sources.list and apt rejects a malformed [option].
     TMPDIR="$(mmdebstrap_tmpdir)" mmdebstrap --variant=minbase --include=python3 \
-      --format=tar bookworm "$tarout" \
-      "deb [signed-by=${keyring}] http://deb.debian.org/debian bookworm main"
+      --keyring="$keyring" \
+      --setup-hook="copy-in ${keyring} /etc/apt/trusted.gpg.d" \
+      --format=tar bookworm "$tarout" http://deb.debian.org/debian
     tar -C "$tree" --exclude=./dev --exclude=./proc --exclude=./sys -xf "$tarout"
     rm -f "$tarout"
     mkdir -p "$tree/dev" "$tree/proc" "$tree/sys"
