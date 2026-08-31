@@ -5,12 +5,12 @@
 help:
 	@echo "Corvus-Node — install and run (Linux + KVM)"
 	@echo
+	@echo "  ./install.sh        Guided install into \$HOME/Corvus-Node (sudo when needed)"
 	@echo "  make check          Can this machine bake assets and run?"
 	@echo "  make guest-assets   Download kernel/VMM and bake the guest disk"
-	@echo "  sudo make install   Install Node once (group, systemd, /opt/corvus-node)"
+	@echo "  sudo make install   Privileged Node only (after bake; same as installer sudo step)"
 	@echo
-	@echo "Then (no sudo):"
-	@echo "  newgrp corvus        Once, if you were just added to the group"
+	@echo "Then (no sudo; installer already entered group corvus):"
 	@echo "  corvus status"
 	@echo "  corvus vm start"
 	@echo "  corvus chat          /exit leaves; VM stays up"

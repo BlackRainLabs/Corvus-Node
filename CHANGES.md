@@ -4,6 +4,23 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - v0.1.6 guided installer into $HOME/Corvus-Node
+
+**Documents Modified:**
+- `install.sh`, `packaging/operator-install.sh`, `packaging/install.sh`, `packaging/check-prereqs.sh`, `packaging/corvus-node.service.in`
+- `Makefile`, `pyproject.toml`, `src/corvus_node/__init__.py`, `cli.py`, `node/control.py`, `node/info.py`, `node/settings.py`
+- `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGES.md`
+- `docs/planning/OPERATIONS.md`, `ROADMAP.md`, `docs/architecture/OVERVIEW.md`, `POLICY.md`, `guest/README.md`, `guest/bake.sh`
+- `tests/test_operator_install.py`, `test_control.py`, `test_chatview.py`, `test_update.py`, `test_kvm_smoke.py`
+
+**Key Changes:**
+- Version **0.1.6**. `./install.sh` is the operator path: branded, idempotent, explains sudo, installs missing packages, bakes assets, installs Node under `$HOME/Corvus-Node` (`root:corvus` venv). Jailer chroots stay `/var/lib/corvus-node`. The installer adds you to group `corvus` and `exec newgrp` in that terminal.
+- Re-runs skip green already-up-to-date steps. `--yes` and `CORVUS_NODE_INSTALL_DRY=1` for non-interactive / tests. `sudo make install` remains the inner privileged script.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - README lede: security-first harness
 
 **Documents Modified:**

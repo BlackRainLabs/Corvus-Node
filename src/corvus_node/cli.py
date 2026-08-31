@@ -129,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         return _serve(merged)
     if args.command == "run":
         if not args.once or not args.text:
-            print("corvus: v0.1.5 requires: run --once TEXT", file=sys.stderr)
+            print(f"corvus: v{__version__} requires: run --once TEXT", file=sys.stderr)
             return 2
         return _run_once(args.text, merged)
     print(f"corvus: unknown command {args.command}", file=sys.stderr)
@@ -227,7 +227,7 @@ def _vm(args: argparse.Namespace) -> int:
             print(f"corvus: {exc}", file=sys.stderr)
             return 2
         return _start(merged)
-    print("corvus: v0.1.5 requires: vm start|stop|status", file=sys.stderr)
+    print(f"corvus: v{__version__} requires: vm start|stop|status", file=sys.stderr)
     return 2
 
 

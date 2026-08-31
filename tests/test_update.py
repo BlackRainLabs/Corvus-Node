@@ -20,8 +20,8 @@ from corvus_node.node.update import (
 
 def test_parse_version() -> None:
     assert parse_version("v0.1.4") == (0, 1, 4)
-    assert parse_version("0.1.5") == (0, 1, 5)
-    assert parse_version("0.1.5") > parse_version("0.1.4")
+    assert parse_version("0.1.6") == (0, 1, 6)
+    assert parse_version("0.1.6") > parse_version("0.1.5")
 
 
 def test_github_install_ref() -> None:

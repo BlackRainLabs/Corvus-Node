@@ -8,7 +8,23 @@ from pathlib import Path
 
 import pytest
 
-from corvus_node.node.control import ControlClient, ControlError, decode_frame, encode_frame
+from corvus_node.node.control import (
+    ControlClient,
+    ControlError,
+    decode_frame,
+    encode_frame,
+    product_prefix,
+    runtime_dir,
+)
+
+
+def test_runtime_dir_defaults_under_home_prefix(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("CORVUS_NODE_RUNTIME_DIR", raising=False)
+    monkeypatch.setenv("CORVUS_NODE_PREFIX", str(tmp_path / "Corvus-Node"))
+    assert product_prefix() == tmp_path / "Corvus-Node"
+    assert runtime_dir() == tmp_path / "Corvus-Node" / "run"
 
 
 def test_encode_decode_roundtrip() -> None:

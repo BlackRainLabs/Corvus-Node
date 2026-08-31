@@ -81,10 +81,10 @@ if getent group corvus >/dev/null 2>&1; then
   if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx corvus; then
     ok "group corvus (this user)"
   else
-    warn "group corvus exists; this user is not in it (newgrp corvus, or log out and back in)"
+    warn "group corvus exists; this user is not in it (./install.sh enters the group)"
   fi
 else
-  warn "group corvus not created yet (sudo make install adds it)"
+  warn "group corvus not created yet (./install.sh adds it)"
 fi
 
 assets=0
@@ -96,7 +96,7 @@ done
 if [[ "$assets" -eq 4 ]]; then
   ok "guest assets in $CACHE"
 else
-  warn "guest assets not complete in $CACHE — next: make guest-assets"
+  warn "guest assets not complete in $CACHE — next: ./install.sh (or make guest-assets)"
 fi
 
 if command -v systemctl >/dev/null && systemctl is-active --quiet corvus-node.service 2>/dev/null; then
@@ -112,8 +112,7 @@ if [[ "$need" -ne 0 ]]; then
   exit 1
 fi
 echo "Ready for:"
-echo "  make guest-assets     # skip if guest assets already ok"
-echo "  sudo make install     # once"
-echo "  newgrp corvus         # once, if you were just added to the group"
+echo "  ./install.sh          # guided install into \$HOME/Corvus-Node"
+echo "  or: make guest-assets && sudo make install"
 echo "  corvus status && corvus vm start && corvus chat"
 exit 0
