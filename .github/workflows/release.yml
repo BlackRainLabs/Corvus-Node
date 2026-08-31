@@ -58,6 +58,7 @@ jobs:
       - name: Build wheel and install snapshot
         if: steps.ver.outputs.skip != '1'
         run: |
+          unset GIT_AUTHOR_DATE GIT_COMMITTER_DATE SOURCE_DATE_EPOCH
           pip install build
           python -m build --wheel
           VER="${{ steps.ver.outputs.ver }}"
@@ -69,6 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          unset GIT_AUTHOR_DATE GIT_COMMITTER_DATE SOURCE_DATE_EPOCH
           VER="${{ steps.ver.outputs.ver }}"
           gh release create "v$VER" \
             --target "${GITHUB_SHA}" \

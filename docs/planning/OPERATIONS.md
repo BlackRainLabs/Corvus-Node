@@ -35,11 +35,15 @@ make lint
 make smoke            # Node must be up; no guest already running
 ```
 
+`make test` refuses a frozen `GIT_AUTHOR_DATE` / `GIT_COMMITTER_DATE`. Unset them before you commit. Do not copy those dates from an older commit when rewriting.
+
 Do not use `corvus update` or `./install.sh --release` to pick up uncommitted clone work.
 
 ## Deploy (every new version)
 
 A new version is a GitHub Release (wheel + `corvus-node-install.tar.gz`). Bump `pyproject.toml`, `src/corvus_node/__init__.py`, and the README version together, merge to `main`. CI (`.github/workflows/release.yml`) publishes `vX.Y.Z` if that version has no release yet. Tagging `vX.Y.Z` by hand does the same. Doc-only merges on an already-released version do not cut a new Release.
+
+Commits and Releases use the wall clock. CI unsets `GIT_AUTHOR_DATE`, `GIT_COMMITTER_DATE`, and `SOURCE_DATE_EPOCH` before it builds the wheel and creates the Release. GitHub file listings use **author date**; a frozen stamp makes every touched file look hours old.
 
 ## Dev loop (no VM)
 
