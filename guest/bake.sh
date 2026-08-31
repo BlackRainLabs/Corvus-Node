@@ -138,11 +138,20 @@ install_payload() {
   local tree="$1"
   mkdir -p "$tree/opt/corvus/src" "$tree/opt/corvus/guest" "$tree/opt/corvus/vendor"
   mkdir -p "$tree/dev" "$tree/proc" "$tree/sys" "$tree/tmp" "$tree/run" "$tree/var/tmp"
-  PYTHONPATH="$REPO_ROOT/src" python3 -c "
+  # Load guest_payload by file. Importing corvus_node.vm pulls launcher/pydantic.
+  python3 - "$tree" "$REPO_ROOT" "$REPO_ROOT/src/corvus_node/vm/guest_payload.py" <<'PY'
+import importlib.util
+import sys
 from pathlib import Path
-from corvus_node.vm.guest_payload import install_into
-install_into(Path('$tree'), Path('$REPO_ROOT'))
-"
+
+tree = Path(sys.argv[1])
+repo = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("guest_payload", sys.argv[3])
+mod = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(mod)
+mod.install_into(tree, repo)
+PY
 }
 
 install_pydantic() {
