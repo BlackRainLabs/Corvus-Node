@@ -4,6 +4,18 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - bake copies guest payload without host pydantic
+
+**Documents Modified:**
+- `guest/bake.sh`, `tests/test_bake.py`, `CHANGES.md`
+
+**Key Changes:**
+- After mmdebstrap, bake imported `corvus_node.vm.guest_payload` through `vm/__init__.py`, which needs pydantic. A fresh Kubuntu has no pydantic on system Python. Bake now loads `guest_payload.py` by file path.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - bake creates apt trusted.gpg.d before copy-in
 
 **Documents Modified:**

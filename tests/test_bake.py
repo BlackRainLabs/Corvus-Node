@@ -37,3 +37,11 @@ def test_bake_pins_debian_archive_keyring() -> None:
     assert "debian_keyring_for_unshare" in text
     install = (ROOT / "packaging" / "operator-install.sh").read_text()
     assert "debian-archive-keyring" in install
+
+
+def test_bake_copies_payload_without_host_pydantic() -> None:
+    text = (ROOT / "guest" / "bake.sh").read_text()
+    assert "spec_from_file_location" in text
+    assert "from corvus_node.vm.guest_payload" not in text
+    payload = text.split("install_payload()", 1)[1].split("install_pydantic()", 1)[0]
+    assert "PYTHONPATH=" not in payload
