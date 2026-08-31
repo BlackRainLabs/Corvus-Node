@@ -19,7 +19,7 @@ CONTROL_SOCK_NAME = "control.sock"
 PID_NAME = "node.pid"
 LOG_NAME = "node.log"
 CONTROL_GROUP = "corvus"
-INSTALL_HINT = "Node service is not running; ./install.sh or sudo make install"
+INSTALL_HINT = "Corvus is not running; ./install.sh"
 
 
 def product_prefix() -> Path:
@@ -71,10 +71,19 @@ def prepare_runtime_dir() -> Path:
 
 def apply_socket_perms(path: Path) -> None:
     os.chmod(path, 0o660)
+    _chown_control_group(path, 0 if os.geteuid() == 0 else os.getuid())
+
+
+def apply_pid_perms(path: Path) -> None:
+    os.chmod(path, 0o640)
+    if os.geteuid() == 0:
+        _chown_control_group(path, 0)
+
+
+def _chown_control_group(path: Path, uid: int) -> None:
     gid = _control_gid()
     if gid is None:
         return
-    uid = 0 if os.geteuid() == 0 else os.getuid()
     try:
         os.chown(path, uid, gid)
     except PermissionError:
@@ -137,7 +146,22 @@ def node_pid() -> int | None:
     pid = read_pid_file(pid_file_path())
     if pid is not None and pid_is_alive(pid):
         return pid
+    if control_socket_up():
+        return pid if pid is not None else 0
     return None
+
+
+def control_socket_up() -> bool:
+    path = control_socket_path()
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.settimeout(0.5)
+        sock.connect(os.fsdecode(path))
+    except OSError:
+        return False
+    finally:
+        sock.close()
+    return True
 
 
 def clear_stale_runtime() -> None:

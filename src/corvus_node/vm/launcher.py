@@ -343,11 +343,9 @@ def stage_jail_root(
 
 
 def _place(src: Path, dest: Path) -> None:
+    """Copy into the jail. Do not hardlink: chown of a link would change the host asset."""
     dest.unlink(missing_ok=True)
-    try:
-        os.link(src, dest)
-    except OSError:
-        shutil.copy2(src, dest)
+    shutil.copy2(src, dest)
 
 
 def ensure_runtime(
@@ -505,8 +503,11 @@ async def launch_turn(config: LaunchConfig) -> str:
             server = await asyncio.start_unix_server(on_guest, path=str(listen_path))
         except OSError as exc:
             raise IsolationUnavailable(f"failed to bind vsock UDS {listen_path}: {exc}") from exc
-        # Jailer drops to uid/gid before exec. Config, log, and the vsock UDS
-        # must be owned by that user (directory chown does not cover these files).
+        # Jailer drops to uid/gid before exec. Kernel, rootfs, config, log, and
+        # the vsock UDS must be owned by that user (directory chown does not
+        # cover these files). Hardlinking the host assets would chown them too.
+        chown_mode(root / "vmlinux", uid, uid, 0o400)
+        chown_mode(root / "rootfs.ext4", uid, uid, 0o400)
         chown_mode(root / "vm.json", uid, uid, 0o600)
         chown_mode(root / "fc.log", uid, uid, 0o600)
         chown_mode(listen_path, uid, uid, stat.S_IRUSR | stat.S_IWUSR)

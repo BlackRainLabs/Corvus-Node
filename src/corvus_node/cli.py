@@ -20,6 +20,8 @@ from corvus_node.node.control import (
     ControlClient,
     ControlError,
     node_pid,
+    product_prefix,
+    runtime_dir,
 )
 from corvus_node.node.daemon import (
     AlreadyRunning,
@@ -29,6 +31,7 @@ from corvus_node.node.daemon import (
     rpc_stop,
     serve_forever,
     start_daemon,
+    wait_node_gone,
 )
 from corvus_node.node.info import (
     CLI_NAME,
@@ -59,6 +62,8 @@ from corvus_node.vm.launcher import (
     require_root,
 )
 
+SYSTEMD_UNIT = "corvus-node.service"
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -70,30 +75,38 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("help", help="show this help")
     sub.add_parser("version", help="print version")
-    sub.add_parser("status", help="Node service, guest VM, isolation, version")
-    start_p = sub.add_parser("start", help="boot the guest VM (alias of: vm start)")
+    status_p = sub.add_parser("status", help="is Corvus up? is an agent session running?")
+    status_p.add_argument(
+        "--brief",
+        action="store_true",
+        help="Node and VM only (no preview, version, or isolation)",
+    )
+    start_p = sub.add_parser("start", help="start the isolated agent (same as: vm start)")
     _launch_flags(start_p)
-    sub.add_parser("chat", help="live chat until /exit")
-    sub.add_parser("stop", help="shut down the guest VM (alias of: vm stop)")
-    vm_p = sub.add_parser("vm", help="Firecracker guest (Node service stays up)")
+    sub.add_parser("chat", help="talk to the agent until /exit")
+    stop_p = sub.add_parser("stop", help="end the session and shut Corvus down")
+    _yes_flag(stop_p)
+    vm_p = sub.add_parser("vm", help="the isolated agent session")
     vm_sub = vm_p.add_subparsers(dest="vm_cmd", required=False)
-    vm_start = vm_sub.add_parser("start", help="boot the jailed guest VM")
+    vm_start = vm_sub.add_parser("start", help="start the isolated agent")
     _launch_flags(vm_start)
-    vm_sub.add_parser("stop", help="shut down the guest VM")
-    vm_sub.add_parser("status", help="guest VM only")
-    sub.add_parser("update", help="install a newer GitHub release of the app")
-    settings_p = sub.add_parser("settings", help="launch rules (tools, workspace)")
+    vm_stop = vm_sub.add_parser("stop", help="end the agent session; Corvus stays ready")
+    _yes_flag(vm_stop)
+    vm_sub.add_parser("status", help="agent session only")
+    update_p = sub.add_parser("update", help="install a newer Corvus release")
+    _yes_flag(update_p)
+    settings_p = sub.add_parser("settings", help="remember tools and folder for next start")
     settings_sub = settings_p.add_subparsers(dest="settings_cmd")
     set_p = settings_sub.add_parser("set", help="set a launch rule")
     set_p.add_argument("key", choices=["tools", "workspace"])
     set_p.add_argument("value")
     unset_p = settings_sub.add_parser("unset", help="clear a launch rule")
     unset_p.add_argument("key", choices=["tools", "workspace"])
-    run_p = sub.add_parser("run", help="one-shot turn (no daemon)")
+    run_p = sub.add_parser("run", help="one reply, then done")
     run_p.add_argument(
         "--once",
         action="store_true",
-        help="one user turn, then exit",
+        help="one user message, then exit",
     )
     run_p.add_argument("text", nargs="?", help="user turn text")
     _launch_flags(run_p)
@@ -107,17 +120,17 @@ def main(argv: list[str] | None = None) -> int:
         print(__version__)
         return 0
     if args.command == "status":
-        return _status()
+        return _status(brief=bool(args.brief))
     if args.command == "settings":
         return _settings(args)
     if args.command == "chat":
         return _run_chat()
     if args.command == "stop":
-        return _stop()
+        return _product_stop(yes=bool(getattr(args, "yes", False)))
     if args.command == "vm":
         return _vm(args)
     if args.command == "update":
-        return _update()
+        return _update(yes=bool(getattr(args, "yes", False)))
     try:
         merged = _merged_launch(args)
     except (WorkspaceError, SettingsError) as exc:
@@ -136,17 +149,26 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
+def _yes_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="skip the confirmation prompt",
+    )
+
+
 def _launch_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--tools",
         default=None,
-        help="comma-separated launch tools (overrides settings)",
+        help="comma-separated tools to allow (echo, file_read, file_write)",
     )
     parser.add_argument(
         "--workspace",
         action="append",
         default=None,
-        help="host directory Node may read/write (one path; overrides settings)",
+        help="folder the agent may read/write (one path)",
     )
 
 
@@ -175,7 +197,7 @@ def _launch_errors(exc: BaseException) -> int:
     if isinstance(exc, IsolationUnavailable):
         print(f"corvus: isolation unavailable: {exc}", file=sys.stderr)
         print(
-            "Refusing to run without jailer/Firecracker/vsock (no TCP fallback).",
+            "Refusing to run without isolation (virtualization is required).",
             file=sys.stderr,
         )
         return 2
@@ -188,9 +210,7 @@ def _launch_errors(exc: BaseException) -> int:
     raise exc
 
 
-def _status() -> int:
-    for line in build_lines():
-        print(line)
+def _status(*, brief: bool = False) -> int:
     pid = node_pid()
     snap: dict | None = None
     error = ""
@@ -203,7 +223,14 @@ def _status() -> int:
         print(line)
     if pid is None:
         print(f"Hint: {INSTALL_HINT}")
+    if brief:
+        return 0
+    print()
+    for line in build_lines():
+        print(line)
+    print()
     sys.stdout.write(format_version_status(check_version()))
+    print()
     gaps = probe_isolation()
     if gaps:
         print("Isolation: not ready")
@@ -219,7 +246,7 @@ def _vm(args: argparse.Namespace) -> int:
     if cmd == "status":
         return _vm_status()
     if cmd == "stop":
-        return _stop()
+        return _vm_stop(yes=bool(getattr(args, "yes", False)))
     if cmd == "start":
         try:
             merged = _merged_launch(args)
@@ -313,7 +340,7 @@ def _start(merged: LaunchSettings) -> int:
             if exc.code == "not_running":
                 print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
             return 2
-    print("corvus: guest VM started", file=sys.stderr)
+    print("corvus: agent started", file=sys.stderr)
     return 0
 
 
@@ -383,7 +410,7 @@ def _run_chat() -> int:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
     if snap.get("state") != "running":
-        print("corvus: guest VM is not running; corvus vm start", file=sys.stderr)
+        print("corvus: the agent is not running; corvus vm start", file=sys.stderr)
         return 2
     chrome = chrome_from_snapshot(snap)
     client = ControlClient()
@@ -402,38 +429,280 @@ def _run_chat() -> int:
         client.close()
 
 
-def _stop() -> int:
+def _vm_is_running(pid: int | None) -> bool:
+    if pid is None:
+        return False
+    try:
+        return rpc_status().get("state") == "running"
+    except ControlError:
+        return False
+
+
+def _confirm(prompt: str, *, yes: bool) -> bool:
+    if yes:
+        return True
+    if not sys.stdin.isatty():
+        print("corvus: not a TTY; pass --yes to confirm", file=sys.stderr)
+        return False
+    print(f"{prompt} [y/N] ", end="", file=sys.stderr, flush=True)
+    try:
+        answer = sys.stdin.readline()
+    except EOFError:
+        return False
+    return answer.strip().lower() in {"y", "yes"}
+
+
+def _print_vm_stop_explain(*, running: bool) -> None:
+    print("corvus vm stop — end the agent session only", file=sys.stderr)
+    if running:
+        print("The isolated agent will shut down.", file=sys.stderr)
+    else:
+        print("There is no agent session running.", file=sys.stderr)
+    print("Corvus stays ready in the background.", file=sys.stderr)
+    print("You can corvus vm start again without reinstalling.", file=sys.stderr)
+    print("Chat, if open, will disconnect.", file=sys.stderr)
+    print(
+        "This does not shut Corvus down. Use corvus stop for that.",
+        file=sys.stderr,
+    )
+
+
+def _print_product_stop_explain(*, vm_up: bool, systemd: bool) -> None:
+    print("corvus stop — shut Corvus down", file=sys.stderr)
+    print(
+        "  1. The isolated agent" + (" will shut down." if vm_up else " is already stopped."),
+        file=sys.stderr,
+    )
+    if systemd:
+        print(
+            "  2. Corvus in the background will stop.",
+            file=sys.stderr,
+        )
+        print(
+            "     Chat will not work until it is started again.",
+            file=sys.stderr,
+        )
+        print("Start again with: ./install.sh", file=sys.stderr)
+        print("  (or sudo systemctl start corvus-node)", file=sys.stderr)
+        print(
+            "A password may be asked because isolation is a system job.",
+            file=sys.stderr,
+        )
+        print("You are not giving the agent an admin account.", file=sys.stderr)
+    else:
+        print("  2. Corvus in the background will stop.", file=sys.stderr)
+    print("To end only the agent session and leave Corvus ready: corvus vm stop", file=sys.stderr)
+
+
+def _systemd_main_pid() -> int | None:
+    try:
+        proc = subprocess.run(
+            ["systemctl", "show", "-p", "MainPID", "--value", SYSTEMD_UNIT],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        pid = int((proc.stdout or "").strip() or "0")
+    except ValueError:
+        return None
+    return pid if pid > 0 else None
+
+
+def _uses_this_systemd_unit(node: int | None) -> bool:
+    """Stop systemd only when this CLI is talking to that unit's process."""
+    main = _systemd_main_pid()
+    if main is None:
+        return False
+    if node is not None and node > 0:
+        return main == node
+    return runtime_dir().resolve() == (product_prefix() / "run").resolve()
+
+
+def _print_replace_stop_explain(*, why: str, vm_up: bool, systemd: bool) -> None:
+    print(f"corvus {why} — Corvus is already running", file=sys.stderr)
+    print(
+        "  1. The isolated agent" + (" will shut down." if vm_up else " is already stopped."),
+        file=sys.stderr,
+    )
+    if systemd:
+        print("  2. Corvus in the background will stop so files can be replaced.", file=sys.stderr)
+    else:
+        print("  2. Corvus in the background will stop so files can be replaced.", file=sys.stderr)
+    if why == "update":
+        print("  3. The newer release is installed.", file=sys.stderr)
+        print("  4. Corvus starts again.", file=sys.stderr)
+    else:
+        print("  3. Install continues, then Corvus starts again.", file=sys.stderr)
+    print("A password may be asked because isolation is a system job.", file=sys.stderr)
+
+
+def _stop_systemd_unit() -> int:
+    cmd = ["systemctl", "stop", SYSTEMD_UNIT]
+    if os.geteuid() != 0:
+        cmd = ["sudo", *cmd]
+    print(
+        "corvus: stopping Corvus (password: isolation is a system job)",
+        file=sys.stderr,
+    )
+    try:
+        return subprocess.run(cmd, check=False).returncode
+    except FileNotFoundError:
+        return 127
+
+
+def _start_systemd_unit() -> int:
+    cmd = ["systemctl", "start", SYSTEMD_UNIT]
+    if os.geteuid() != 0:
+        cmd = ["sudo", *cmd]
+    print(
+        "corvus: starting Corvus (password: isolation is a system job)",
+        file=sys.stderr,
+    )
+    try:
+        return subprocess.run(cmd, check=False).returncode
+    except FileNotFoundError:
+        return 127
+
+
+def _pip_upgrade(ref: str) -> int:
+    return subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--upgrade", ref],
+        check=False,
+    ).returncode
+
+
+def _execute_product_stop() -> int:
+    """Stop guest then Node. Caller already confirmed."""
+    pid = node_pid()
+    systemd = _uses_this_systemd_unit(pid)
+    if pid is None and not systemd:
+        print("corvus: Corvus is already stopped", file=sys.stderr)
+        return 0
+    if pid is not None:
+        try:
+            rpc_stop()
+            print("corvus: agent session ended", file=sys.stderr)
+        except ControlError as exc:
+            print(f"corvus: agent session: {exc}", file=sys.stderr)
+    if systemd:
+        rc = _stop_systemd_unit()
+        if rc != 0:
+            print(
+                "corvus: Corvus did not stop; it may still be up (sudo systemctl stop corvus-node)",
+                file=sys.stderr,
+            )
+            return 2
+        wait_node_gone()
+        print("corvus: Corvus stopped", file=sys.stderr)
+        return 0
+    if node_pid() is not None:
+        try:
+            rpc_shutdown()
+        except ControlError as exc:
+            print(f"corvus: {exc}", file=sys.stderr)
+            return 2
+    print("corvus: Corvus stopped", file=sys.stderr)
+    return 0
+
+
+def _vm_stop(*, yes: bool) -> int:
+    pid = node_pid()
+    if pid is None:
+        print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
+        return 2
+    running = _vm_is_running(pid)
+    _print_vm_stop_explain(running=running)
+    if not _confirm("End the agent session? Corvus will stay ready.", yes=yes):
+        print("corvus: cancelled", file=sys.stderr)
+        return 2
     try:
         rpc_stop()
     except ControlError as exc:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
-    print("corvus: guest VM shut down", file=sys.stderr)
+    if running:
+        print("corvus: agent session ended; Corvus stays ready", file=sys.stderr)
+    else:
+        print("corvus: no agent session was running; Corvus stays ready", file=sys.stderr)
     return 0
 
 
-def _update() -> int:
+def _product_stop(*, yes: bool) -> int:
+    pid = node_pid()
+    systemd = _uses_this_systemd_unit(pid)
+    if pid is None and not systemd:
+        print("corvus: Corvus is already stopped", file=sys.stderr)
+        return 0
+    _print_product_stop_explain(vm_up=_vm_is_running(pid), systemd=systemd)
+    if not _confirm("Shut down the agent and Corvus?", yes=yes):
+        print("corvus: cancelled", file=sys.stderr)
+        return 2
+    rc = _execute_product_stop()
+    if rc == 0 and systemd:
+        print(
+            "corvus: start again with ./install.sh (or sudo systemctl start corvus-node)",
+            file=sys.stderr,
+        )
+    return rc
+
+
+def _stop_running_for_replace(*, yes: bool, why: str) -> tuple[int, bool]:
+    """If Node is up, confirm and stop it. Returns (code, restarted_later)."""
+    pid = node_pid()
+    systemd = _uses_this_systemd_unit(pid)
+    if pid is None and not systemd:
+        return 0, False
+    _print_replace_stop_explain(why=why, vm_up=_vm_is_running(pid), systemd=systemd)
+    prompt = (
+        "Stop Corvus, then continue the update?"
+        if why == "update"
+        else "Stop Corvus, then continue install?"
+    )
+    if not _confirm(prompt, yes=yes):
+        print("corvus: cancelled; Corvus is still running", file=sys.stderr)
+        return 2, False
+    rc = _execute_product_stop()
+    return rc, systemd and rc == 0
+
+
+def _update(*, yes: bool) -> int:
     status = check_version()
     sys.stdout.write(format_version_status(status))
     if not status.update_available or not status.github:
         return 0
+    stop_rc, restart = _stop_running_for_replace(yes=yes, why="update")
+    if stop_rc != 0:
+        return stop_rc
     ref = github_install_ref(status.github)
     print(f"corvus: installing {ref}", file=sys.stderr)
-    proc = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "--upgrade", ref],
-        check=False,
-    )
-    if proc.returncode != 0:
+    pip_rc = _pip_upgrade(ref)
+    if pip_rc != 0:
         print(
             "corvus: pip failed; sudo corvus update (updating the installed app is a reinstall)",
             file=sys.stderr,
         )
-        return proc.returncode
-    try:
-        rpc_shutdown()
-    except ControlError:
-        pass
-    print("corvus: updated; Node service will restart if systemd is enabled", file=sys.stderr)
+        if restart:
+            print(
+                "corvus: Corvus is down; ./install.sh (or sudo systemctl start corvus-node)",
+                file=sys.stderr,
+            )
+        return pip_rc
+    if restart:
+        start_rc = _start_systemd_unit()
+        if start_rc != 0:
+            print(
+                "corvus: updated, but Corvus did not start (./install.sh)",
+                file=sys.stderr,
+            )
+            return start_rc
+        print("corvus: updated; Corvus started", file=sys.stderr)
+        return 0
+    print("corvus: updated", file=sys.stderr)
     return 0
 
 
