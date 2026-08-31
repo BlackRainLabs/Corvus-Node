@@ -23,6 +23,8 @@ help:
 	@echo "  make lint"
 	@echo "  make smoke          Live run against the installed Corvus"
 	@echo
+	@echo "Ship a version: bump pyproject + __version__ + README, merge main"
+	@echo
 	@echo "Docs: README.md"
 
 check:
