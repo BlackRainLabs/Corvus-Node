@@ -363,15 +363,16 @@ def test_update_pips_when_github_newer_on_install(
     pip_refs: list[str] = []
     monkeypatch.setattr("corvus_node.cli._pip_upgrade", lambda ref: pip_refs.append(ref) or 0)
     monkeypatch.setattr("corvus_node.cli._start_systemd_unit", lambda: 0)
-    assert main(["update"]) == 0
+    assert main(["update", "--yes"]) == 0
     assert pip_refs
+    assert "releases/download" in pip_refs[0]
     err = capsys.readouterr().err
     assert "installing" in err
     assert "updated" in err
 
 
-def test_update_requires_yes_when_node_is_up(
-    fake_node: object, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_update_without_yes_keeps_current(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     from corvus_node.node.update import VersionStatus
 
@@ -381,11 +382,10 @@ def test_update_requires_yes_when_node_is_up(
     )
     pip_refs: list[str] = []
     monkeypatch.setattr("corvus_node.cli._pip_upgrade", lambda ref: pip_refs.append(ref) or 0)
-    assert main(["update"]) == 2
+    assert main(["update"]) == 0
     assert pip_refs == []
     err = capsys.readouterr().err
-    assert "already running" in err
-    assert "--yes" in err or "cancelled" in err
+    assert "keeping" in err or "not a TTY" in err
 
 
 def test_update_yes_stops_live_node_then_pips(

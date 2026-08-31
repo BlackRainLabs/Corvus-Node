@@ -52,7 +52,8 @@ install -d -m 0755 -o root -g "$GROUP" "$BIN_DIR"
 
 "$PYTHON_SYS" -m venv "$VENV"
 "$VENV/bin/python" -m pip install --upgrade pip
-"$VENV/bin/python" -m pip install "$ROOT"
+PIP_SRC="${CORVUS_NODE_PIP_SRC:-$ROOT}"
+"$VENV/bin/python" -m pip install "$PIP_SRC"
 chown -R root:"$GROUP" "$VENV"
 chmod -R u=rwX,g=rX,o= "$VENV"
 

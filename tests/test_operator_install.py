@@ -50,6 +50,8 @@ def test_help_mentions_brand_and_password_story() -> None:
     assert "chat is not root" in out.lower()
     assert "password" in out.lower()
     assert "isolation" in out.lower()
+    assert "--release" in out
+    assert "git checkout" in out.lower() or "this checkout" in out.lower()
 
 
 def test_dry_run_does_not_invoke_apt_get(tmp_path: Path) -> None:
@@ -106,8 +108,18 @@ def test_installer_script_stops_a_running_node() -> None:
     text = SCRIPT.read_text()
     assert "Corvus is already running" in text
     assert "Stop Corvus, then continue install?" in text
+    assert "Upgrade the install?" in text
+    assert "this git checkout" in text
+    assert "--release" in text
+    assert "CORVUS_NODE_PIP_SRC" in text
     assert "systemctl stop corvus-node.service" in text
     assert "source_newer_than_install" in text
     assert "wait_corvus_up" in text
     assert "status --brief" in text
     assert 'echo "${C_BOLD}Status${C_RST}"' in text
+
+
+def test_release_and_local_flags_conflict() -> None:
+    result = _run(["bash", str(SCRIPT), "--release", "--local"])
+    assert result.returncode == 2
+    assert "not both" in (result.stdout + result.stderr).lower()
