@@ -1,0 +1,14 @@
+---
+description: Commits, docs, and GitHub Releases use the real clock — never frozen GIT_*_DATE
+alwaysApply: true
+---
+
+# Real git timestamps
+
+Never `export GIT_AUTHOR_DATE` or `GIT_COMMITTER_DATE`. Do not copy those values from an older commit when rewriting (`commit-tree`, amend, strip trailers). If they are already in the environment, `unset GIT_AUTHOR_DATE GIT_COMMITTER_DATE` before any `git commit`.
+
+GitHub lists files by **author date**. A frozen stamp makes every touched file look hours old even when the merge is new.
+
+`CHANGES.md` dates and docs **Last Updated** are today's date.
+
+CI must not set `SOURCE_DATE_EPOCH` on the Release job. `make test` fails if `GIT_AUTHOR_DATE` or `GIT_COMMITTER_DATE` is set.
