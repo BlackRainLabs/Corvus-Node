@@ -4,6 +4,19 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - bake works from a mktemp unpack directory
+
+**Documents Modified:**
+- `guest/bake.sh`, `tests/test_bake.py`, `guest/README.md`
+- `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- `mmdebstrap` unshare cannot write into a `0700` directory (`mktemp -d` under `/tmp` on a fresh install). Bake now streams a tarball via `/tmp` and extracts as the operator so the agent disk still builds.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - installer does not fail closed without GUI deps
 
 **Documents Modified:**
