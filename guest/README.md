@@ -15,8 +15,11 @@ PID 1 is `guest/init.sh`: mounts proc/sys/dev/tmp as root, then drops to uid `co
 ## Bake
 
 ```bash
+make check
 make guest-assets
 ```
+
+`make check` lists missing bake tools or `/dev/kvm` before a long fetch. First bake often takes several minutes.
 
 Produces (gitignored):
 

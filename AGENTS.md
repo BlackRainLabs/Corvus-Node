@@ -14,7 +14,7 @@
    - Root `CHANGES.md` (latest changes)
    - `docs/architecture/AGENT-WORKFLOW.md` (guest engine behavior)
    - `docs/planning/OPERATIONS.md` (run, test, Firecracker smoke)
-   - Root `README.md` (setup)
+   - Root `README.md` (operator setup: `make check`, bake, `sudo make install`)
 
 2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`.
 
