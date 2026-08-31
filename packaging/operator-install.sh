@@ -182,7 +182,7 @@ pkg_names() {
   local kind
   kind="$(pkg_kind)"
   case "$kind" in
-    apt) echo python3 python3-venv python3-pip make curl e2fsprogs mmdebstrap qemu-kvm ;;
+    apt) echo python3 python3-venv python3-pip make curl e2fsprogs mmdebstrap debian-archive-keyring qemu-kvm ;;
     dnf) echo python3 python3-pip make curl e2fsprogs mmdebstrap qemu-kvm ;;
     *) echo "" ;;
   esac
@@ -287,6 +287,13 @@ missing_pkgs() {
     fi
     if [[ "$pkg" == "mmdebstrap" ]]; then
       if command -v mmdebstrap >/dev/null || command -v debootstrap >/dev/null || command -v docker >/dev/null; then
+        continue
+      fi
+      echo "$pkg"
+      continue
+    fi
+    if [[ "$pkg" == "debian-archive-keyring" ]]; then
+      if host_pkg_present "$pkg"; then
         continue
       fi
       echo "$pkg"

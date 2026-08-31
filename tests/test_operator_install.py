@@ -128,6 +128,7 @@ def test_installer_script_stops_a_running_node() -> None:
     assert "missing_qt_pkgs" in text
     assert "CLI is available" in text
     assert "optional for corvus gui" in text
+    assert "debian-archive-keyring" in text
 
 
 def test_release_and_local_flags_conflict() -> None:

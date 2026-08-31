@@ -4,6 +4,19 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - bake verifies Debian bookworm on Ubuntu/Kubuntu
+
+**Documents Modified:**
+- `guest/bake.sh`, `packaging/operator-install.sh`, `tests/test_bake.py`, `tests/test_operator_install.py`
+- `guest/README.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Ubuntu/Kubuntu apt keys do not sign Debian bookworm (`NO_PUBKEY` / repository is not signed). Bake pins `debian-archive-keyring` 2025.1 and passes it to `mmdebstrap` as `signed-by`. The installer also installs that package on apt hosts.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - bake works from a mktemp unpack directory
 
 **Documents Modified:**
