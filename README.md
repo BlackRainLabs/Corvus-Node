@@ -1,8 +1,10 @@
 # Corvus-Node
 
-Run **one** agent in a Firecracker microVM on your Linux box. You talk to it with the `corvus` command.
+**Corvus** is a security-first AI agent harness. One agent. One Firecracker microVM. The model never calls tools, never sees the rest of the host, and never skips policy — **Node** is the only door, and it is default-deny.
 
-This is an **actively developed** project (v0.1.5). Chat in this build uses a deterministic **stub** LLM so you can install the real isolation path today — not a hosted chatbot, and not a finished product.
+Talk to it with `corvus` on Linux. Isolation is the product, not a plugin.
+
+v0.1.5 is under active development. This build uses a stub LLM so you can run the real jailer path today.
 
 **Version:** 0.1.5 · **License:** [AGPLv3](LICENSE) · **Org:** Black Rain Labs — Research & Development Division
 
