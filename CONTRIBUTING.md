@@ -3,7 +3,9 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
-To **install and run** Corvus-Node as an operator, start with [README.md](README.md) (`./install.sh`). This file is for people changing the code.
+To **install and run** Corvus, start with [README.md](README.md) (`./install.sh`). This file is for people changing the code.
+
+Operator-facing copy (README, `./install.sh`, `corvus --help`) stays plain language. Isolation rules, Firecracker/jailer, and the four-engine model live in `docs/architecture/`.
 
 ## Workflow
 

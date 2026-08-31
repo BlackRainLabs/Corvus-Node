@@ -11,6 +11,7 @@ import pytest
 
 from corvus_node.node.update import (
     check_version,
+    fetch_github_lookup,
     fetch_github_version,
     github_install_ref,
     local_unreleased,
@@ -40,11 +41,30 @@ def test_local_unreleased_when_newer_than_github() -> None:
 def test_check_version_unreleased_does_not_offer_update() -> None:
     status = check_version()
     assert status.update_available is False
-    assert (
-        "GitHub" in status.reason
-        or "unreleased" in status.reason
-        or "not on GitHub" in status.reason
+    assert status.github is None
+    reason = status.reason.lower()
+    assert any(
+        needle in reason
+        for needle in (
+            "github",
+            "unreleased",
+            "not on github",
+            "skipped",
+            "no github tags",
+        )
     )
+
+
+def test_check_version_skip_env_on_clean_source_does_not_offer_update(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI: CORVUS_NODE_SKIP_UPDATE_CHECK=1 and a clean checkout."""
+    monkeypatch.setattr("corvus_node.node.update.local_unreleased", lambda _g: False)
+    monkeypatch.setattr("corvus_node.node.update.is_source_checkout", lambda: True)
+    status = check_version()
+    assert status.update_available is False
+    assert status.github is None
+    assert status.reason == "version check skipped"
 
 
 def test_fetch_github_picks_latest_tag(
@@ -75,13 +95,39 @@ def test_fetch_github_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("corvus_node.node.update.urllib.request.urlopen", _boom)
     assert fetch_github_version() is None
+    assert fetch_github_lookup() == (None, "GitHub unreachable")
+
+
+def test_fetch_github_empty_tags_is_not_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CORVUS_NODE_SKIP_UPDATE_CHECK", raising=False)
+
+    class _Resp:
+        def read(self) -> bytes:
+            return b"[]"
+
+        def __enter__(self) -> "_Resp":
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    monkeypatch.setattr("corvus_node.node.update.urllib.request.urlopen", lambda *a, **k: _Resp())
+    monkeypatch.setattr("corvus_node.node.update.local_unreleased", lambda _g: False)
+    monkeypatch.setattr("corvus_node.node.update.is_source_checkout", lambda: False)
+    assert fetch_github_lookup() == (None, "no GitHub tags yet")
+    status = check_version()
+    assert status.update_available is False
+    assert status.reason == "no GitHub tags yet"
+    assert "unreachable" not in status.reason
 
 
 def test_check_version_newer_github_on_release_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("CORVUS_NODE_SKIP_UPDATE_CHECK", raising=False)
-    monkeypatch.setattr("corvus_node.node.update.fetch_github_version", lambda **_: "9.9.9")
+    monkeypatch.setattr("corvus_node.node.update.fetch_github_lookup", lambda **_: ("9.9.9", ""))
     monkeypatch.setattr("corvus_node.node.update.local_unreleased", lambda _g: False)
     monkeypatch.setattr("corvus_node.node.update.is_source_checkout", lambda: False)
     status = check_version()

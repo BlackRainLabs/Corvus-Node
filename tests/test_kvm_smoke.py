@@ -52,7 +52,7 @@ def use_installed_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 @pytest.fixture(autouse=True)
 def _reap_guest_vm() -> None:
     yield
-    main(["vm", "stop"])
+    main(["vm", "stop", "--yes"])
 
 
 def test_run_once_stub_turn(capsys: pytest.CaptureFixture[str]) -> None:
@@ -163,7 +163,7 @@ def test_vm_start_status_chat_stop(
     full = capsys.readouterr().out
     assert "Node: up" in full
     assert "VM: running" in full
-    code = main(["vm", "stop"])
+    code = main(["vm", "stop", "--yes"])
     assert code == 0
     code = main(["vm", "status"])
     assert code == 0

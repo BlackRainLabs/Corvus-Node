@@ -3,25 +3,26 @@
 .PHONY: help check test lint guest-assets install smoke
 
 help:
-	@echo "Corvus-Node — install and run (Linux + KVM)"
+	@echo "Corvus-Node — a private AI agent for Linux"
 	@echo
-	@echo "  ./install.sh        Guided install into \$HOME/Corvus-Node (sudo when needed)"
-	@echo "  make check          Can this machine bake assets and run?"
-	@echo "  make guest-assets   Download kernel/VMM and bake the guest disk"
-	@echo "  sudo make install   Privileged Node only (after bake; same as installer sudo step)"
+	@echo "  ./install.sh        Install (password only when needed)"
 	@echo
-	@echo "Then (no sudo; installer already entered group corvus):"
-	@echo "  corvus status"
-	@echo "  corvus vm start"
-	@echo "  corvus chat          /exit leaves; VM stays up"
-	@echo "  corvus stop          Shut down the guest VM"
+	@echo "Then:"
+	@echo "  corvus status       Is Corvus up?"
+	@echo "  corvus vm start     Start the isolated agent"
+	@echo "  corvus chat         Talk to it; type /exit when done"
+	@echo "  corvus vm stop      End the session; Corvus stays ready"
+	@echo "  corvus stop         Shut everything down (asks first)"
 	@echo
-	@echo "Developers"
-	@echo "  make test           Unit tests (no VM)"
+	@echo "Developers — CONTRIBUTING.md"
+	@echo "  make check          Can this machine install and run?"
+	@echo "  make guest-assets   Build the agent disk"
+	@echo "  sudo make install   Privileged step (./install.sh does this)"
+	@echo "  make test           Unit tests (no virtual machine)"
 	@echo "  make lint"
-	@echo "  make smoke          Live KVM against the installed Node"
+	@echo "  make smoke          Live run against the installed Corvus"
 	@echo
-	@echo "Docs: README.md     Contribute: CONTRIBUTING.md"
+	@echo "Docs: README.md"
 
 check:
 	bash packaging/check-prereqs.sh

@@ -4,6 +4,99 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - status does not call empty GitHub tags “unreachable”
+
+**Documents Modified:**
+- `src/corvus_node/node/update.py`, `tests/test_update.py`
+- `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- `corvus status` talks to GitHub’s tags API. This repo has no tags yet, so the check used to print **GitHub unreachable**. It now says **no GitHub tags yet** when the API answers with an empty list. Skip vs network failure stay distinct. Tests accept **version check skipped** when `CORVUS_NODE_SKIP_UPDATE_CHECK=1` (CI is a clean checkout).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - status is scannable; installer prints a brief block
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `packaging/operator-install.sh`
+- `tests/test_cli.py`, `tests/test_operator_install.py`
+- `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- `corvus status` leads with Node/VM, then blank-line groups for this preview, version, and isolation. `--brief` is Node and VM only.
+- `./install.sh` prints a **Status** section (brief, colored) before **You're set**, instead of dumping the full status wall into the install log.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - jailer kernel EACCES; reinstall when source is newer
+
+**Documents Modified:**
+- `src/corvus_node/vm/launcher.py`, `packaging/operator-install.sh`
+- `tests/test_launcher.py`, `tests/test_operator_install.py`
+- `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Jailer drops to an unprivileged uid before Firecracker opens `/vmlinux`. The jail copy of the kernel and rootfs is now a real copy (not a hardlink) owned by that uid, so boot is not Permission denied.
+- `./install.sh` reinstalls when this checkout is newer than the installed package (same version string is not enough). After start, it waits for Corvus to come up before printing status.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - operator copy in plain language
+
+**Documents Modified:**
+- `README.md`, `CONTRIBUTING.md`, `Makefile`, `CHANGES.md`
+- `packaging/operator-install.sh`, `packaging/install.sh`
+- `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`, `src/corvus_node/node/control.py`, `src/corvus_node/node/chatview.py`
+- `tests/test_cli.py`, `tests/test_operator_install.py`, `tests/test_chatview.py`
+
+**Key Changes:**
+- README, `./install.sh`, `corvus --help`, and stop/update confirmations talk to a first-time user (private agent, locked room, password only for isolation). Firecracker, jailer, Engine 3, vsock, and systemd stay in contributor docs.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - install and update stop a running Node (confirm)
+
+**Documents Modified:**
+- `packaging/operator-install.sh`, `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`
+- `tests/test_cli.py`, `tests/test_operator_install.py`
+- `README.md`, `AGENTS.md`, `SECURITY.md`, `CHANGES.md`
+- `docs/planning/OPERATIONS.md`
+
+**Key Changes:**
+- `./install.sh` detects a live Node (systemd or control socket), explains that replacing files under a running process is unsafe, and asks before shutting down the guest and Node. `--yes` confirms. Install then starts Node again.
+- `corvus update` does the same: confirm, stop guest + Node, pip the GitHub tag, start Node. `--yes` skips the prompt. Unreleased local trees still refuse to install from GitHub.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - corvus stop is full shutdown; vm stop is guest-only
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`, `src/corvus_node/node/daemon.py`
+- `tests/test_cli.py`, `tests/conftest.py`, `tests/test_kvm_smoke.py`
+- `README.md`, `AGENTS.md`, `SECURITY.md`, `CHANGES.md`, `Makefile`
+- `docs/architecture/OVERVIEW.md`, `AGENT-WORKFLOW.md`
+- `docs/planning/OPERATIONS.md`, `ROADMAP.md`
+- `packaging/operator-install.sh`
+
+**Key Changes:**
+- `corvus vm stop` shuts down the Firecracker guest only. It explains that and asks for confirmation (`--yes` skips). Node stays up.
+- `corvus stop` is no longer an alias. It shuts down the guest, then the Node systemd unit, explains both, and asks first. Sudo is only for `systemctl stop` (root jailer daemon). `start` remains an alias of `vm start`.
+- SIGTERM on the Node serve process (systemd stop) reaps the guest instead of dropping the jailer.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - v0.1.6 guided installer into $HOME/Corvus-Node
 
 **Documents Modified:**
@@ -14,8 +107,8 @@
 - `tests/test_operator_install.py`, `test_control.py`, `test_chatview.py`, `test_update.py`, `test_kvm_smoke.py`
 
 **Key Changes:**
-- Version **0.1.6**. `./install.sh` is the operator path: branded, idempotent, explains sudo, installs missing packages, bakes assets, installs Node under `$HOME/Corvus-Node` (`root:corvus` venv). Jailer chroots stay `/var/lib/corvus-node`. The installer adds you to group `corvus` and `exec newgrp` in that terminal.
-- Re-runs skip green already-up-to-date steps. `--yes` and `CORVUS_NODE_INSTALL_DRY=1` for non-interactive / tests. `sudo make install` remains the inner privileged script.
+- Version **0.1.6**. `./install.sh` is the operator path: branded, idempotent, explains sudo, installs missing packages, bakes assets, installs Node under `$HOME/Corvus-Node` (`root:corvus` venv). Jailer chroots stay `/var/lib/corvus-node`. `corvus` is on PATH (`/usr/local/bin`); it uses group `corvus` automatically (no `newgrp`).
+- Re-runs skip green already-up-to-date steps. `--yes` and `CORVUS_NODE_INSTALL_DRY=1` for non-interactive / tests. `sudo make install` remains the inner privileged script. `corvus` is installed to `/usr/local/bin` and uses `sg` so a fresh terminal finds the command without `newgrp`. The Node pid file is `root:corvus` so `status` can see a live service.
 
 **Reviewed By:** Black Rain Labs - R&D
 

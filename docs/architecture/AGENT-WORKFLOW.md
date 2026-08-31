@@ -33,10 +33,10 @@ Mandatory rules for the four engines inside the Firecracker VM. Guest code is un
 | **COLLECT** | Gather engine results; Engine 1 may run tools only after `tool_call_response.approved` |
 | **RESPOND** | Engine 2 sends `agent_response` to Node over vsock |
 | **NEXT** | Chat waits for another `user_query` on the same session |
-| **DONE** | Node sends `session_end` (`run --once` after one turn, or `corvus stop` / `vm stop`) |
+| **DONE** | Node sends `session_end` (`run --once` after one turn, or `corvus vm stop` / `corvus stop`) |
 | **ABORTED** | Terminal failure; no further engine work |
 
-`DONE` and `ABORTED` are the only terminal phases. After `vm start`, Node repeats RECEIVE–RESPOND until `vm stop`. `corvus chat` is a live session with a sticky header; `/exit` detaches and does not send `session_end`. `corvus stop` / `vm stop` always shut down the guest first. The Node service stays idle after `vm stop`.
+`DONE` and `ABORTED` are the only terminal phases. After `vm start`, Node repeats RECEIVE–RESPOND until `vm stop`. `corvus chat` is a live session with a sticky header; `/exit` detaches and does not send `session_end`. `corvus vm stop` always shuts down the guest first (confirmation); the Node service stays idle. `corvus stop` then stops Node (confirmation; sudo for systemd).
 
 ## Engine rules
 

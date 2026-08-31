@@ -78,7 +78,7 @@ def format_header_lines(chrome: ChatChrome, width: int) -> list[str]:
         bits.append(f"tools: {chrome.tools}")
     if chrome.workspace:
         bits.append(f"workspace: {chrome.workspace}")
-    bits.append("guest stays up until vm stop")
+    bits.append("session stays up until corvus vm stop")
     line2 = " " + "  ·  ".join(bits)
     line3 = "─" * max(1, width)
     return [_fit(line1, width), _fit(line2, width), _fit(line3, width)]
