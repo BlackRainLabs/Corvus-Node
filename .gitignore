@@ -1,0 +1,14 @@
+.DS_Store
+*.zip
+*.tar
+__pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+artifacts/
+var/
+.coverage
+.cache/

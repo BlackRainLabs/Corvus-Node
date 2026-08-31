@@ -1,0 +1,282 @@
+"""CLI fails closed without Firecracker/KVM. Operator verbs without a VM.
+
+Organization: Black Rain Labs
+Division: Research & Development Division
+"""
+
+import io
+import sys
+from pathlib import Path
+
+import pytest
+
+from corvus_node import __version__
+from corvus_node.cli import main
+from corvus_node.node.info import format_runtime_status, format_vm_status
+
+
+def test_run_once_fails_closed_without_isolation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_KERNEL", str(tmp_path / "missing-kernel"))
+    monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
+    code = main(["run", "--once", "hello"])
+    assert code == 2
+
+
+def test_workspace_flag_without_isolation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_KERNEL", str(tmp_path / "missing-kernel"))
+    monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
+    code = main(["run", "--once", "hello", "--workspace", str(tmp_path)])
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "not mounted" not in err
+    assert "make install" in err or "isolation unavailable" in err
+
+
+def test_two_workspace_flags_fail_closed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    other = tmp_path / "other"
+    other.mkdir()
+    code = main(["run", "--once", "hello", "--workspace", str(tmp_path), "--workspace", str(other)])
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "one --workspace path" in err
+
+
+def test_missing_workspace_fails_closed(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code = main(["run", "--once", "hello", "--workspace", str(tmp_path / "missing")])
+    assert code == 2
+    assert "missing" in capsys.readouterr().err
+
+
+def test_once_tools_before_text_parses(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("CORVUS_NODE_KERNEL", str(tmp_path / "missing-kernel"))
+    monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
+    code = main(["run", "--once", "--tools", "echo", "hello"])
+    assert code == 2
+
+
+def test_start_fails_closed_without_node(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["start"])
+    assert code == 2
+    assert "make install" in capsys.readouterr().err
+
+
+def test_chat_fails_closed_when_node_down(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["chat"])
+    assert code == 2
+    assert "not running" in capsys.readouterr().err
+
+
+def test_stop_fails_closed_when_node_down(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["stop"])
+    assert code == 2
+    assert "not running" in capsys.readouterr().err
+
+
+def test_format_runtime_status_splits_node_and_vm() -> None:
+    assert format_runtime_status(None, None) == ["Node: down", "VM: (none)"]
+    idle = format_runtime_status(3, {"state": "idle", "pid": 3, "vm_instance_id": ""})
+    assert idle[0] == "Node: up  pid=3"
+    assert idle[1] == "VM: idle"
+    running = format_vm_status(
+        {
+            "state": "running",
+            "vm_instance_id": "abc",
+            "tools": ["echo"],
+            "workspace": ["/tmp/ws"],
+        }
+    )
+    assert running[0] == "VM: running  id=abc"
+    assert "echo" in running[1]
+    assert "/tmp/ws" in running[2]
+
+
+def test_run_without_once_fails(capsys: pytest.CaptureFixture[str]) -> None:
+    code = main(["run", "hello"])
+    assert code == 2
+    assert "run --once TEXT" in capsys.readouterr().err
+
+
+def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main([]) == 0
+    out = capsys.readouterr().out
+    assert "Corvus-Node" in out
+    assert "usage: corvus" in out
+    assert "Not in this build" in out
+    assert "provider LLM" in out
+    assert "vm start" in out or "Firecracker guest" in out
+    assert main(["version"]) == 0
+    assert capsys.readouterr().out.strip() == __version__
+
+
+def test_status_without_node(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setenv("CORVUS_NODE_KERNEL", str(tmp_path / "missing-kernel"))
+    monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
+    assert main(["status"]) == 0
+    out = capsys.readouterr().out
+    assert "Node: down" in out
+    assert "VM: (none)" in out
+    assert "This build:" in out
+    assert "Not in this build:" in out
+    assert "Version:" in out
+
+
+def test_settings_roundtrip_cli(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path / "run"))
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    assert main(["settings", "set", "tools", "echo,file_read"]) == 0
+    assert main(["settings", "set", "workspace", str(ws)]) == 0
+    capsys.readouterr()
+    assert main(["settings"]) == 0
+    out = capsys.readouterr().out
+    assert "echo" in out
+    assert "file_read" in out
+    assert str(ws.resolve()) in out
+    assert main(["settings", "unset", "tools"]) == 0
+    capsys.readouterr()
+    assert main(["settings"]) == 0
+    assert "(none)" in capsys.readouterr().out
+
+
+def test_chat_live_until_exit(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", io.StringIO("hello\n/exit\n"))
+    assert main(["chat"]) == 0
+    captured = capsys.readouterr()
+    assert "reply:hello" in captured.out
+    assert "you" in captured.err
+    assert "/exit to leave" in captured.err
+    assert "model: stub" in captured.err
+    assert "context: —" in captured.err
+    assert "stdin closed" not in captured.err
+
+
+def test_chat_exit_sends_nothing(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", io.StringIO("/exit\n"))
+    assert main(["chat"]) == 0
+    captured = capsys.readouterr()
+    assert "reply:" not in captured.out
+    assert "/exit to leave" in captured.err
+
+
+def test_chat_empty_stdin_reports_closed(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", io.StringIO(""))
+    assert main(["chat"]) == 0
+    assert "stdin closed" in capsys.readouterr().err
+
+
+def test_vm_fails_closed_without_subcommand(capsys: pytest.CaptureFixture[str]) -> None:
+    code = main(["vm"])
+    assert code == 2
+    assert "vm start|stop|status" in capsys.readouterr().err
+
+
+def test_vm_status_fails_closed_without_node(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["vm", "status"])
+    assert code == 2
+    captured = capsys.readouterr()
+    assert "VM: (none)" in captured.out
+    assert "make install" in captured.err
+
+
+def test_vm_start_fails_closed_without_node(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["vm", "start"])
+    assert code == 2
+    assert "make install" in capsys.readouterr().err
+
+
+def test_status_splits_node_and_vm(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["status"]) == 0
+    out = capsys.readouterr().out
+    assert "Node: up" in out
+    assert "VM: running" in out
+    assert main(["vm", "status"]) == 0
+    vm = capsys.readouterr().out
+    assert "VM: running" in vm
+    assert "Node:" not in vm
+
+
+def test_vm_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["vm", "start"]) == 0
+    assert "started" in capsys.readouterr().err
+
+
+def test_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["start"]) == 0
+    assert "started" in capsys.readouterr().err
+
+
+def test_stop_shuts_down_guest_vm(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["stop"]) == 0
+    assert "shut down" in capsys.readouterr().err
+    assert main(["vm", "stop"]) == 0
+
+
+def test_update_skips_when_unreleased_or_unchecked(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["update"]) == 0
+    captured = capsys.readouterr()
+    assert "Version:" in captured.out
+    assert "Update:" in captured.out
+    assert "installing" not in captured.err
+
+
+def test_update_pips_when_github_newer_on_install(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from corvus_node.node.update import VersionStatus
+
+    monkeypatch.setattr(
+        "corvus_node.cli.check_version",
+        lambda: VersionStatus("0.1.4", "0.1.5", "release", True, "GitHub 0.1.5 is newer"),
+    )
+
+    class _Proc:
+        returncode = 0
+
+    pip_calls: list[object] = []
+
+    def _run(*args: object, **_kwargs: object) -> _Proc:
+        pip_calls.append(args)
+        return _Proc()
+
+    monkeypatch.setattr("corvus_node.cli.subprocess.run", _run)
+    monkeypatch.setattr("corvus_node.cli.rpc_shutdown", lambda: None)
+    assert main(["update"]) == 0
+    assert pip_calls
+    err = capsys.readouterr().err
+    assert "installing" in err
+    assert "updated" in err

@@ -1,0 +1,16 @@
+[Unit]
+Description=Corvus-Node privileged Node daemon
+Documentation=file:///usr/local/share/doc/corvus-node
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/corvus-node/env
+ExecStart=PYTHON_PLACEHOLDER -m corvus_node serve
+Restart=always
+RestartSec=2
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
