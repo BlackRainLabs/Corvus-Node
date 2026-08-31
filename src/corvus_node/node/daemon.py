@@ -18,6 +18,7 @@ from corvus_node.gateway.adapter import LocalCliAdapter
 from corvus_node.node.control import (
     ControlClient,
     ControlError,
+    apply_pid_perms,
     apply_socket_perms,
     clear_stale_runtime,
     control_socket_path,
@@ -86,7 +87,7 @@ def _write_pid() -> None:
     path = pid_file_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"{os.getpid()}\n", encoding="utf-8")
-    os.chmod(path, 0o640)
+    apply_pid_perms(path)
 
 
 def _unlink_runtime() -> None:
@@ -284,6 +285,7 @@ async def serve_forever(config: LaunchConfig) -> None:
 
     server = await asyncio.start_unix_server(on_control, path=str(sock))
     apply_socket_perms(sock)
+    _arm_shutdown_signals(state)
     try:
         await state.shutdown.wait()
     finally:
@@ -381,13 +383,32 @@ def rpc_stop() -> None:
         raise ControlError(f"unexpected stop reply: {frame['type']}")
 
 
+def _arm_shutdown_signals(state: ServeState) -> None:
+    """systemd stop sends SIGTERM; reap the guest instead of dropping the jailer."""
+    loop = asyncio.get_running_loop()
+
+    def _trip() -> None:
+        state.shutdown.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, _trip)
+        except (NotImplementedError, RuntimeError):
+            continue
+
+
+def wait_node_gone(*, timeout: float = 15.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if node_pid() is None:
+            return True
+        time.sleep(0.05)
+    return False
+
+
 def rpc_shutdown() -> None:
     with ControlClient() as client:
         frame = client.rpc("shutdown")
     if frame["type"] != "shutdown_ok":
         raise ControlError(f"unexpected shutdown reply: {frame['type']}")
-    deadline = time.monotonic() + 15.0
-    while time.monotonic() < deadline:
-        if node_pid() is None:
-            return
-        time.sleep(0.05)
+    wait_node_gone()

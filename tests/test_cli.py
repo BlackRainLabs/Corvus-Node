@@ -33,7 +33,7 @@ def test_workspace_flag_without_isolation(
     assert code == 2
     err = capsys.readouterr().err
     assert "not mounted" not in err
-    assert "make install" in err or "isolation unavailable" in err
+    assert "install.sh" in err or "isolation unavailable" in err
 
 
 def test_two_workspace_flags_fail_closed(
@@ -66,7 +66,7 @@ def test_start_fails_closed_without_node(
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
     code = main(["start"])
     assert code == 2
-    assert "make install" in capsys.readouterr().err
+    assert "install.sh" in capsys.readouterr().err
 
 
 def test_chat_fails_closed_when_node_down(
@@ -78,13 +78,13 @@ def test_chat_fails_closed_when_node_down(
     assert "not running" in capsys.readouterr().err
 
 
-def test_stop_fails_closed_when_node_down(
+def test_stop_already_down_is_noop(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
     code = main(["stop"])
-    assert code == 2
-    assert "not running" in capsys.readouterr().err
+    assert code == 0
+    assert "already stopped" in capsys.readouterr().err
 
 
 def test_format_runtime_status_splits_node_and_vm() -> None:
@@ -116,9 +116,9 @@ def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out
     assert "Corvus-Node" in out
     assert "usage: corvus" in out
-    assert "Not in this build" in out
-    assert "provider LLM" in out
-    assert "vm start" in out or "Firecracker guest" in out
+    assert "Not yet" in out
+    assert "live AI model" in out
+    assert "vm start" in out
     assert main(["version"]) == 0
     assert capsys.readouterr().out.strip() == __version__
 
@@ -133,9 +133,13 @@ def test_status_without_node(
     out = capsys.readouterr().out
     assert "Node: down" in out
     assert "VM: (none)" in out
-    assert "This build:" in out
-    assert "Not in this build:" in out
+    assert "This preview:" in out
+    assert "Not yet:" in out
     assert "Version:" in out
+    assert "Isolation:" in out
+    assert out.index("Node: down") < out.index("This preview:")
+    assert out.index("This preview:") < out.index("Version:")
+    assert out.index("Version:") < out.index("Isolation:")
 
 
 def test_settings_roundtrip_cli(
@@ -205,7 +209,17 @@ def test_vm_status_fails_closed_without_node(
     assert code == 2
     captured = capsys.readouterr()
     assert "VM: (none)" in captured.out
-    assert "make install" in captured.err
+    assert "install.sh" in captured.err
+
+
+def test_vm_stop_fails_closed_when_node_down(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    code = main(["vm", "stop"])
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "install.sh" in err or "not running" in err
 
 
 def test_vm_start_fails_closed_without_node(
@@ -214,7 +228,7 @@ def test_vm_start_fails_closed_without_node(
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
     code = main(["vm", "start"])
     assert code == 2
-    assert "make install" in capsys.readouterr().err
+    assert "install.sh" in capsys.readouterr().err
 
 
 def test_status_splits_node_and_vm(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
@@ -228,6 +242,21 @@ def test_status_splits_node_and_vm(fake_node: object, capsys: pytest.CaptureFixt
     assert "Node:" not in vm
 
 
+def test_status_brief_is_node_and_vm_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setenv("CORVUS_NODE_KERNEL", str(tmp_path / "missing-kernel"))
+    monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
+    assert main(["status", "--brief"]) == 0
+    out = capsys.readouterr().out
+    assert "Node: down" in out
+    assert "VM: (none)" in out
+    assert "This preview:" not in out
+    assert "Version:" not in out
+    assert "Isolation:" not in out
+
+
 def test_vm_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["vm", "start"]) == 0
     assert "started" in capsys.readouterr().err
@@ -238,10 +267,78 @@ def test_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixtu
     assert "started" in capsys.readouterr().err
 
 
-def test_stop_shuts_down_guest_vm(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+class _TtyStdin(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def test_vm_stop_shuts_down_guest_only(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "corvus_node.cli.rpc_shutdown",
+        lambda: (_ for _ in ()).throw(AssertionError("vm stop must not shut down Node")),
+    )
+    assert main(["vm", "stop", "--yes"]) == 0
+    err = capsys.readouterr().err
+    assert "agent session only" in err
+    assert "agent session ended" in err
+    assert "Corvus stays ready" in err
+
+
+def test_vm_stop_cancelled(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", _TtyStdin("n\n"))
+    assert main(["vm", "stop"]) == 2
+    assert "cancelled" in capsys.readouterr().err
+
+
+def test_vm_stop_requires_yes_when_not_a_tty(
+    fake_node: object, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["vm", "stop"]) == 2
+    assert "--yes" in capsys.readouterr().err
+
+
+def test_stop_shuts_down_guest_and_node(
+    fake_node: object, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert main(["stop", "--yes"]) == 0
+    err = capsys.readouterr().err
+    assert "shut Corvus down" in err
+    assert "agent session ended" in err
+    assert "Corvus stopped" in err
+
+
+def test_stop_cancelled(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", _TtyStdin("n\n"))
+    assert main(["stop"]) == 2
+    assert "cancelled" in capsys.readouterr().err
+
+
+def test_stop_accepted_on_tty(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sys, "stdin", _TtyStdin("yes\n"))
     assert main(["stop"]) == 0
-    assert "shut down" in capsys.readouterr().err
-    assert main(["vm", "stop"]) == 0
+    err = capsys.readouterr().err
+    assert "Corvus stopped" in err
+
+
+def test_stop_does_not_stop_host_systemd(
+    fake_node: object, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    called: list[int] = []
+    monkeypatch.setattr(
+        "corvus_node.cli._stop_systemd_unit",
+        lambda: called.append(1) or 0,
+    )
+    assert main(["stop", "--yes"]) == 0
+    assert called == []
+    capsys.readouterr()
 
 
 def test_update_skips_when_unreleased_or_unchecked(
@@ -263,20 +360,50 @@ def test_update_pips_when_github_newer_on_install(
         "corvus_node.cli.check_version",
         lambda: VersionStatus("0.1.4", "0.1.5", "release", True, "GitHub 0.1.5 is newer"),
     )
-
-    class _Proc:
-        returncode = 0
-
-    pip_calls: list[object] = []
-
-    def _run(*args: object, **_kwargs: object) -> _Proc:
-        pip_calls.append(args)
-        return _Proc()
-
-    monkeypatch.setattr("corvus_node.cli.subprocess.run", _run)
-    monkeypatch.setattr("corvus_node.cli.rpc_shutdown", lambda: None)
+    pip_refs: list[str] = []
+    monkeypatch.setattr("corvus_node.cli._pip_upgrade", lambda ref: pip_refs.append(ref) or 0)
+    monkeypatch.setattr("corvus_node.cli._start_systemd_unit", lambda: 0)
     assert main(["update"]) == 0
-    assert pip_calls
+    assert pip_refs
     err = capsys.readouterr().err
+    assert "installing" in err
+    assert "updated" in err
+
+
+def test_update_requires_yes_when_node_is_up(
+    fake_node: object, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from corvus_node.node.update import VersionStatus
+
+    monkeypatch.setattr(
+        "corvus_node.cli.check_version",
+        lambda: VersionStatus("0.1.4", "0.1.5", "release", True, "GitHub 0.1.5 is newer"),
+    )
+    pip_refs: list[str] = []
+    monkeypatch.setattr("corvus_node.cli._pip_upgrade", lambda ref: pip_refs.append(ref) or 0)
+    assert main(["update"]) == 2
+    assert pip_refs == []
+    err = capsys.readouterr().err
+    assert "already running" in err
+    assert "--yes" in err or "cancelled" in err
+
+
+def test_update_yes_stops_live_node_then_pips(
+    fake_node: object, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from corvus_node.node.update import VersionStatus
+
+    monkeypatch.setattr(
+        "corvus_node.cli.check_version",
+        lambda: VersionStatus("0.1.4", "0.1.5", "release", True, "GitHub 0.1.5 is newer"),
+    )
+    pip_refs: list[str] = []
+    monkeypatch.setattr("corvus_node.cli._pip_upgrade", lambda ref: pip_refs.append(ref) or 0)
+    monkeypatch.setattr("corvus_node.cli._start_systemd_unit", lambda: 0)
+    assert main(["update", "--yes"]) == 0
+    assert pip_refs
+    err = capsys.readouterr().err
+    assert "already running" in err
+    assert "Corvus stopped" in err
     assert "installing" in err
     assert "updated" in err

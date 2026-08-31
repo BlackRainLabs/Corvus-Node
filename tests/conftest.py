@@ -55,6 +55,7 @@ class FakeNode:
     async def _serve(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.unlink(missing_ok=True)
+        halt = asyncio.Event()
 
         async def on_conn(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
             try:
@@ -89,7 +90,13 @@ class FakeNode:
                             },
                         )
                     elif msg["type"] == "stop":
-                        await write_frame(writer, "stop_ok", {})
+                        await write_frame(writer, "stop_ok", {"state": "idle"})
+                        return
+                    elif msg["type"] == "shutdown":
+                        pid_file_path().unlink(missing_ok=True)
+                        await write_frame(writer, "shutdown_ok", {})
+                        self.path.unlink(missing_ok=True)
+                        halt.set()
                         return
                     elif msg["type"] == "chat_attach":
                         await write_frame(writer, "waiting", {})
@@ -102,7 +109,7 @@ class FakeNode:
                                 await write_frame(writer, "agent", {"text": f"reply:{text}"})
                                 await write_frame(writer, "waiting", {})
                             elif inner["type"] == "stop":
-                                await write_frame(writer, "stop_ok", {})
+                                await write_frame(writer, "stop_ok", {"state": "idle"})
                                 return
                     else:
                         await write_frame(
@@ -120,11 +127,12 @@ class FakeNode:
         pid_path.write_text(f"{os.getpid()}\n", encoding="utf-8")
         self._ready.set()
         try:
-            while True:
-                await asyncio.sleep(0.05)
+            await halt.wait()
         finally:
             server.close()
             await server.wait_closed()
+            pid_file_path().unlink(missing_ok=True)
+            self.path.unlink(missing_ok=True)
 
 
 @pytest.fixture
