@@ -22,6 +22,7 @@ def test_mmdebstrap_streams_tar_via_world_writable_tmp() -> None:
     assert 'bookworm "$tree"' not in mm_block
     assert "--format=tar" in mm_block
     assert "--keyring=" in mm_block
+    assert 'mkdir -p "$1/etc/apt/trusted.gpg.d"' in mm_block
     assert "copy-in" in mm_block
     assert "signed-by=" not in mm_block
     assert "fetching Debian archive keyring" in text

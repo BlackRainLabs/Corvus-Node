@@ -4,6 +4,18 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - bake creates apt trusted.gpg.d before copy-in
+
+**Documents Modified:**
+- `guest/bake.sh`, `tests/test_bake.py`, `CHANGES.md`
+
+**Key Changes:**
+- mmdebstrap `copy-in` failed because `/etc/apt/trusted.gpg.d` does not exist yet in the setup chroot. Bake `mkdir -p` that directory first, then copies the Debian keyring.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - bake sources.list stays valid on Ubuntu
 
 **Documents Modified:**
