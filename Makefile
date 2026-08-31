@@ -15,6 +15,7 @@ help:
 	@echo "  corvus stop         Shut everything down (asks first)"
 	@echo
 	@echo "Developers — CONTRIBUTING.md"
+	@echo "  ./install.sh        This clone into \$HOME/Corvus-Node"
 	@echo "  make check          Can this machine install and run?"
 	@echo "  make guest-assets   Build the agent disk"
 	@echo "  sudo make install   Privileged step (./install.sh does this)"
