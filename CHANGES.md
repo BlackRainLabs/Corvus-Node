@@ -4,6 +4,33 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - every new version is a GitHub Release
+
+**Documents Modified:**
+- `.github/workflows/release.yml`, `tests/test_cli.py`
+- `CONTRIBUTING.md`, `AGENTS.md`, `README.md`, `Makefile`, `SECURITY.md`
+- `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`, `CHANGES.md`
+
+**Key Changes:**
+- Deploy: bump `pyproject.toml`, `__version__`, and README, merge to `main`. CI publishes `vX.Y.Z` (wheel + install tarball) if that version has no Release yet. A manual `v*` tag still works. Doc-only merges on an already-released version do not cut a new Release.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - README leads with the user install tarball
+
+**Documents Modified:**
+- `README.md`, `packaging/operator-install.sh`, `.github/workflows/release.yml`
+- `docs/planning/OPERATIONS.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CHANGES.md`
+
+**Key Changes:**
+- README **Install** is the GitHub Release bundle (`corvus-node-install.tar.gz`), not a clone. Clone stays under **For contributors**. Releases also attach a stable `corvus-node-install.tar.gz` name so `/releases/latest/download/` works.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - workflow docs match clone vs GitHub release
 
 **Documents Modified:**

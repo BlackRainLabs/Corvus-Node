@@ -18,6 +18,7 @@
 - Version check vs GitHub **releases** (wheel); unreleased local trees do not update from GitHub
 - `./install.sh` from a git checkout (or unpacked snapshot with `src/`) uses this tree; `--release` / `corvus update` use the GitHub release wheel (upgrade or keep)
 - Each version ships `--help` / `status` that name this build; unimplemented verbs fail closed
+- Each new version is a GitHub Release (wheel + install tarball) via `.github/workflows/release.yml` on merge to `main` or a `v*` tag
 - Live host workspace, jailer, hop MAC, RBAC, stub chat
 - Unit tests without a VM (`make test`); installed-Node KVM smoke (`make smoke`)
 

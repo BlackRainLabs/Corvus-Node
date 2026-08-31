@@ -12,19 +12,22 @@ This preview uses a **practice model** (a stub) so you can try the real isolatio
 
 64-bit Linux (Intel/AMD or ARM) with virtualization turned on — most PCs already have this.
 
-**This checkout (developers):** clone the repo and run the installer. It installs *this* tree.
+You do **not** need to clone this repository. Download the small install bundle from the [latest GitHub Release](https://github.com/BlackRainLabs/Corvus-Node/releases/latest) (`corvus-node-install.tar.gz` — not the Source code zip).
 
 ```bash
-git clone https://github.com/BlackRainLabs/Corvus-Node.git
-cd Corvus-Node
+curl -fL -o corvus-node-install.tar.gz \
+  https://github.com/BlackRainLabs/Corvus-Node/releases/latest/download/corvus-node-install.tar.gz
+mkdir -p corvus-install
+tar -xzf corvus-node-install.tar.gz -C corvus-install
+cd corvus-install
 ./install.sh
 ```
 
-**Installed app (users):** after Corvus is on the machine, `corvus update` installs the GitHub **release wheel** (not a git clone). It asks before replacing what you have. A GitHub Release also ships a small install tarball (scripts + source to run, not tests or architecture docs).
+If that download fails, there is no GitHub Release yet. Wait for one, or see [For contributors](#for-contributors) to install from a clone.
 
 The installer may ask for your password to set up isolation. **Chatting does not use sudo.** The agent never gets your admin account.
 
-Re-run `./install.sh` anytime. From a git clone it uses this checkout; `--release` fetches the GitHub wheel instead. If Corvus is already installed, you can **upgrade** or **keep** the current version. The installer does not look up GitHub unless you pass `--release`. `corvus status` and `corvus update` do. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
+Later, `corvus update` installs a newer GitHub release (asks before replacing). Re-run `./install.sh` from the folder you unpacked if you still have it. If Corvus is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
 
 ## First run
 
@@ -35,7 +38,7 @@ corvus chat                # type a line, then /exit
 corvus vm stop             # end the session; Corvus stays ready
 ```
 
-`corvus` is on your PATH after install. If a command says Corvus is not running, run `./install.sh` again.
+`corvus` is on your PATH after install. If a command says Corvus is not running, start it with `sudo systemctl start corvus-node`, or run `./install.sh` from the folder you unpacked.
 
 ### Everyday commands
 
@@ -55,7 +58,7 @@ Optional: `--tools echo` lets the agent echo text back. `--workspace /path --too
 ### If something goes wrong
 
 - The installer prints red **need** lines — install what it asks, turn virtualization on in firmware if it says so, run `./install.sh` again.
-- `corvus status` shows `Node: down` — Corvus is not running in the background. `./install.sh` (or `sudo systemctl start corvus-node`).
+- `corvus status` shows `Node: down` — Corvus is not running in the background. `sudo systemctl start corvus-node` (or `./install.sh` from the folder you unpacked).
 - `Isolation: not ready` — run `./install.sh` again so the agent environment finishes installing.
 - `chat` / `vm start` refuse to run if Corvus is down. That is intentional.
 - Permission denied — re-run `./install.sh`. After that, `corvus` should just work.
@@ -74,6 +77,16 @@ That is the product: isolation, not a plugin.
 
 ## For contributors
 
+Clone this repo only if you are changing the code. `./install.sh` from the clone installs **this tree** (not the GitHub wheel). After you change the clone, run `./install.sh` again, then `make smoke` if you need the live guest. Do not use `corvus update` for that. A new version (bumped in `pyproject.toml`, `__version__`, and this README) merged to `main` publishes a GitHub Release.
+
+```bash
+git clone https://github.com/BlackRainLabs/Corvus-Node.git
+cd Corvus-Node
+./install.sh
+```
+
+`--release` fetches the GitHub wheel even from a clone. The installer does not look up GitHub unless you pass `--release`. `corvus status` and `corvus update` do.
+
 Operator copy (this README, `./install.sh`, `corvus --help`) stays plain language. Architecture, isolation rules, and the four-engine model live in the docs below.
 
 - [Contributing](CONTRIBUTING.md) — license, changelog, tests, this-tree install before smoke
@@ -87,9 +100,7 @@ Operator copy (this README, `./install.sh`, `corvus --help`) stays plain languag
 - [Changelog](CHANGES.md)
 - [AGENTS.md](AGENTS.md) — layout for this tree
 
-Dev loop (no virtual machine): `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && make test && make lint`
-
-After you change this clone, `./install.sh` puts **this tree** on the machine; then `make smoke` if you need the live guest. Do not use `corvus update` for that. [Operations](docs/planning/OPERATIONS.md).
+Dev loop (no virtual machine): `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && make test && make lint`. Live path: [Operations](docs/planning/OPERATIONS.md).
 
 ## License
 
