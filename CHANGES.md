@@ -4,6 +4,20 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - v0.1.8 Kubuntu install
+
+**Documents Modified:**
+- `pyproject.toml`, `src/corvus_node/__init__.py`, `README.md`
+- `AGENTS.md`, `SECURITY.md`, `docs/architecture/OVERVIEW.md`, `docs/architecture/POLICY.md`
+- `docs/gui/AVAILABLE.md`, `gui/REQUESTS.md`, `docs/planning/ROADMAP.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Version **0.1.8**. Operators get a GitHub Release with the Ubuntu/Kubuntu first-install bake (Debian keyring, mmdebstrap unshare/tar, payload copy without host pydantic) and optional GUI extras.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - bake copies guest payload without host pydantic
 
 **Documents Modified:**

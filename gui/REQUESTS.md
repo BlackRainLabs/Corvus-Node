@@ -17,6 +17,6 @@ Status values: `open` · `shipped` · `rejected`
 | id | need | why | status | notes |
 | --- | --- | --- | --- | --- |
 
-The v0.1.7 splash does not call Node. No requests yet.
+The splash does not call Node. No requests yet.
 
 **Black Rain Labs - Research & Development Division**
