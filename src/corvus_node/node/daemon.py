@@ -406,6 +406,15 @@ def wait_node_gone(*, timeout: float = 15.0) -> bool:
     return False
 
 
+def wait_node_ready(*, timeout: float = 15.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if node_pid() is not None:
+            return True
+        time.sleep(0.05)
+    return False
+
+
 def rpc_shutdown() -> None:
     with ControlClient() as client:
         frame = client.rpc("shutdown")

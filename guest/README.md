@@ -43,6 +43,6 @@ Environment:
 
 Unit tests still cover protocol, RBAC, Engine 3 isolation, and the turn over a test socket.
 
-Until kernel, rootfs, jailer, KVM, Firecracker, and the Node service exist, `corvus vm start` fails closed. `chat` / `vm stop` fail closed if Node is not running. From this clone: `./install.sh` (installs this tree). Live smoke: `make smoke` against that installed Node.
+Until kernel, rootfs, jailer, KVM, Firecracker, and the Node service exist, `corvus vm start` fails closed. `corvus start` brings Node up and asks before the guest (Enter skips the VM). `chat` / `vm stop` fail closed if Node is not running. From this clone: `./install.sh` (installs this tree). Live smoke: `make smoke` against that installed Node.
 
 **Black Rain Labs - Research & Development Division**

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Organization: Black Rain Labs — Research & Development Division
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec bash "$ROOT/packaging/strip-ai-trailers.sh" "$1"

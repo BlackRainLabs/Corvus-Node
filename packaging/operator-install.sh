@@ -75,7 +75,7 @@ https://www.BlackRainLabs.com
 Users: unpack corvus-node-install.tar.gz from the GitHub Release, then
 ./install.sh here. You do not clone the project. A git clone installs
 this checkout. --release always fetches the latest GitHub wheel.
-If Corvus is already installed, you can upgrade or keep the current
+If Corvus-Node is already installed, you can upgrade or keep the current
 version. Your password is only for setting up isolation. Chat is not root.
 The agent never gets an admin shell. After install, corvus just
 works in this terminal — you do not type extra group commands.
@@ -98,13 +98,13 @@ sudo_story() {
   cat <<EOF
 ${C_BOLD}Why this script asks for your password${C_RST}
 
-  Corvus runs the agent in a locked-down virtual machine. Setting that
+  Corvus-Node runs the agent in a locked-down virtual machine. Setting that
   up is a system job, so Linux asks for your password. ${C_BOLD}Chat does not.${C_RST}
   The agent never gets your admin account, and it cannot call tools
   unless you allow them.
 
   Files land under ${C_BOLD}\$HOME/Corvus-Node${C_RST}. This run may install missing
-  packages, build the agent environment, start Corvus in the background,
+  packages, build the agent environment, start Corvus-Node in the background,
   and make the ${C_BOLD}corvus${C_RST} command work in this terminal.
 
 EOF
@@ -599,13 +599,13 @@ else
 fi
 
 echo
-echo "${C_BOLD}Corvus ($(prefix_path))${C_RST}"
+echo "${C_BOLD}Corvus-Node ($(prefix_path))${C_RST}"
 SOURCE="$(install_source)"
 PIP_SRC="$ROOT"
 WANT_VER=""
 if [[ "$SOURCE" == "local" ]]; then
   if ! has_local_tree; then
-    need "this directory has no Corvus source (need pyproject.toml and src/corvus_node)"
+    need "this directory has no Corvus-Node source (need pyproject.toml and src/corvus_node)"
     exit 1
   fi
   WANT_VER="$(tree_version)"
@@ -670,7 +670,7 @@ EOF
   elif confirm_yes "Upgrade the install? No keeps ${HAVE_VER}."; then
     :
   else
-    skip "keeping Corvus $HAVE_VER"
+    skip "keeping Corvus-Node $HAVE_VER"
     NEED_NODE=0
   fi
 fi
@@ -678,60 +678,60 @@ fi
 STOPPED_LIVE=0
 if [[ "$NEED_NODE" -eq 1 ]] && node_live; then
   cat <<EOF
-${C_BOLD}Corvus is already running${C_RST}
+${C_BOLD}Corvus-Node is already running${C_RST}
 
-  Corvus is up right now. We need to stop it before replacing the install
+  Corvus-Node is up right now. We need to stop it before replacing the install
   (otherwise you would mix old and new files).
 
   If you say yes, we will:
     1. End the agent session if one is running
-    2. Stop Corvus in the background (password may be asked)
-    3. Finish this install, then start Corvus again
+    2. Stop Corvus-Node in the background (password may be asked)
+    3. Finish this install, then start Corvus-Node again
 
-  To only end the chat session and leave Corvus ready, cancel and run:
+  To only end the chat session and leave Corvus-Node ready, cancel and run:
     corvus vm stop
 
 EOF
   if [[ "$DRY" -eq 1 ]]; then
-    doing "would stop Corvus (dry-run)"
-  elif confirm_yes "Stop Corvus, then continue install?"; then
-    doing "stop Corvus"
+    doing "would stop Corvus-Node (dry-run)"
+  elif confirm_yes "Stop Corvus-Node, then continue install?"; then
+    doing "stop Corvus-Node"
     stop_running_node
     STOPPED_LIVE=1
-    ok "Corvus stopped"
+    ok "Corvus-Node stopped"
   else
-    need "install cancelled; Corvus is still running"
+    need "install cancelled; Corvus-Node is still running"
     exit 2
   fi
 elif node_live; then
-  skip "Corvus is running (keeping current version)"
+  skip "Corvus-Node is running (keeping current version)"
 else
-  skip "Corvus is not running"
+  skip "Corvus-Node is not running"
 fi
 
 if [[ "$NEED_NODE" -eq 0 ]]; then
-  skip "Corvus $WANT_VER at $(prefix_path)"
+  skip "Corvus-Node $WANT_VER at $(prefix_path)"
 else
-  doing "install Corvus into $(prefix_path)"
+  doing "install Corvus-Node into $(prefix_path)"
   pause
   export CORVUS_NODE_PREFIX="${CORVUS_NODE_PREFIX:-$(prefix_path)}"
   with_spin "install Node" run_sudo env \
     CORVUS_NODE_PREFIX="$CORVUS_NODE_PREFIX" \
     CORVUS_NODE_PIP_SRC="$PIP_SRC" \
     bash "$ROOT/packaging/install.sh"
-  ok "Corvus $WANT_VER"
+  ok "Corvus-Node $WANT_VER"
   if [[ "$DRY" -eq 0 ]] && ! wait_corvus_up; then
-    need "Corvus did not come up after install; sudo systemctl status corvus-node"
+    need "Corvus-Node did not come up after install; sudo systemctl status corvus-node"
   fi
 fi
 
 if [[ "$STOPPED_LIVE" -eq 1 && "$NEED_NODE" -eq 0 && "$DRY" -eq 0 ]]; then
-  doing "start Corvus (it was running before this install)"
+  doing "start Corvus-Node (it was running before this install)"
   run_sudo systemctl start corvus-node.service
   if wait_corvus_up; then
-    ok "Corvus started"
+    ok "Corvus-Node started"
   else
-    need "Corvus did not come up; ./install.sh again"
+    need "Corvus-Node did not come up; ./install.sh again"
   fi
 fi
 
@@ -807,10 +807,11 @@ fi
 echo
 echo "${C_BOLD}You're set${C_RST}"
 cat <<EOF
-  ${C_BOLD}corvus status${C_RST}     ${C_DIM}# is Corvus up?${C_RST}
+  ${C_BOLD}corvus status${C_RST}     ${C_DIM}# is Corvus-Node up?${C_RST}
+  ${C_BOLD}corvus start${C_RST}      ${C_DIM}# bring Corvus-Node up; asks before the VM (Enter skips)${C_RST}
   ${C_BOLD}corvus vm start${C_RST}   ${C_DIM}# start the isolated agent${C_RST}
   ${C_BOLD}corvus chat${C_RST}       ${C_DIM}# talk to it; type /exit when done${C_RST}
-  ${C_BOLD}corvus vm stop${C_RST}    ${C_DIM}# end the session; Corvus stays ready${C_RST}
+  ${C_BOLD}corvus vm stop${C_RST}    ${C_DIM}# end the session; Corvus-Node stays ready${C_RST}
   ${C_BOLD}corvus stop${C_RST}       ${C_DIM}# shut everything down (asks first)${C_RST}
 
   ${C_DIM}Black Rain Labs  ·  https://www.BlackRainLabs.com${C_RST}

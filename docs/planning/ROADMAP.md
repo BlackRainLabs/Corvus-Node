@@ -11,8 +11,8 @@
 ## Now (v0.1.6 — guided installer)
 
 - `./install.sh` into `$HOME/Corvus-Node` (idempotent; sudo only when needed; `corvus` on PATH uses group `corvus` automatically)
-- Operator CLI command is `corvus` (`vm start|stop|status`, `chat`, `status`, `settings`, `run --once`, `update`)
-- `corvus vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd)
+- Operator CLI command is `corvus` (`start`, `vm start|stop|status`, `chat`, `status`, `settings`, `run --once`, `update`)
+- `corvus start` brings Node up and asks before the guest (Enter skips the VM). `corvus vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd)
 - Host AF_UNIX control socket (group `corvus`); guest stays AF_VSOCK
 - Firecracker jail dirs stay `/var/lib/corvus-node` (vsock path limit)
 - Version check vs GitHub **releases** (wheel); unreleased local trees do not update from GitHub
