@@ -102,10 +102,17 @@ chmod 0640 "$ENV_FILE"
 chown root:"$GROUP" "$ENV_FILE"
 
 cat >"$BIN_DIR/corvus" <<EOF
-#!/bin/sh
-# Corvus-Node operator CLI. Sources install env (group corvus).
+#!/bin/bash
+# Corvus-Node operator CLI. Regain group corvus without newgrp (sg).
 set -eu
 PREFIX="$PREFIX"
+GROUP="$GROUP"
+have_group() {
+  id -nG 2>/dev/null | tr ' ' '\\n' | grep -qx "\$GROUP"
+}
+if ! have_group; then
+  exec sg "\$GROUP" -c "\$(printf '%q ' "\$0" "\$@")"
+fi
 ENVF="\$PREFIX/env"
 if [ -r "\$ENVF" ]; then
   set -a
@@ -118,6 +125,9 @@ EOF
 chmod 0755 "$BIN_DIR/corvus"
 chown root:"$GROUP" "$BIN_DIR/corvus"
 ln -sfn "$BIN_DIR/corvus" "$BIN_DIR/corvus-node"
+install -d -m 0755 /usr/local/bin
+install -m 0755 "$BIN_DIR/corvus" /usr/local/bin/corvus
+ln -sfn /usr/local/bin/corvus /usr/local/bin/corvus-node
 
 sed \
   -e "s|PYTHON_PLACEHOLDER|$VENV/bin/python|" \
@@ -139,9 +149,8 @@ for p in "$KERNEL" "$ROOTFS" "$FIRECRACKER" "$JAILER"; do
   fi
 done
 
-echo "corvus: installed to $PREFIX (CLI: $BIN_DIR/corvus)."
-echo "corvus: Firecracker jail dir $JAIL_DIR (short path for vsock)."
+echo "corvus: installed to $PREFIX (command: corvus)."
 if [[ "$missing" -ne 0 ]]; then
-  echo "corvus: guest assets were not in $CACHE."
-  echo "corvus: from this checkout: ./install.sh   (or make guest-assets && sudo make install)"
+  echo "corvus: the agent environment is not finished yet."
+  echo "corvus: from this checkout: ./install.sh"
 fi

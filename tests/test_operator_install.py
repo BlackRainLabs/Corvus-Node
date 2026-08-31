@@ -31,22 +31,25 @@ def _run(args: list[str], env: dict[str, str] | None = None) -> subprocess.Compl
     )
 
 
-def test_install_wrapper_is_executable() -> None:
+def test_privileged_install_puts_corvus_on_usr_local_bin() -> None:
+    text = (ROOT / "packaging" / "install.sh").read_text()
+    assert "/usr/local/bin/corvus" in text
+    assert "exec sg" in text
     assert WRAPPER.is_file()
     assert SCRIPT.is_file()
     mode = WRAPPER.stat().st_mode
     assert mode & stat.S_IXUSR
 
 
-def test_help_mentions_brand_jailer_and_newgrp() -> None:
+def test_help_mentions_brand_and_password_story() -> None:
     result = _run(["bash", str(SCRIPT), "--help"])
     assert result.returncode == 0
     out = result.stdout
     assert "BlackRainLabs.com" in out
-    assert "jailer" in out.lower()
     assert "corvus" in out
-    assert "chat is not root" in out.lower() or "not sudo to chat" in out.lower()
-    assert "newgrp" in out.lower()
+    assert "chat is not root" in out.lower()
+    assert "password" in out.lower()
+    assert "isolation" in out.lower()
 
 
 def test_dry_run_does_not_invoke_apt_get(tmp_path: Path) -> None:
@@ -97,3 +100,14 @@ def test_dry_run_reports_python_already_current() -> None:
     )
     out = result.stdout
     assert "already up to date" in out or "python3" in out
+
+
+def test_installer_script_stops_a_running_node() -> None:
+    text = SCRIPT.read_text()
+    assert "Corvus is already running" in text
+    assert "Stop Corvus, then continue install?" in text
+    assert "systemctl stop corvus-node.service" in text
+    assert "source_newer_than_install" in text
+    assert "wait_corvus_up" in text
+    assert "status --brief" in text
+    assert 'echo "${C_BOLD}Status${C_RST}"' in text

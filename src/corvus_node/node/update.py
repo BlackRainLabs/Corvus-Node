@@ -83,16 +83,17 @@ def local_unreleased(github: str | None) -> bool:
     return False
 
 
-def fetch_github_version(*, timeout: float = 3.0) -> str | None:
+def fetch_github_lookup(*, timeout: float = 3.0) -> tuple[str | None, str]:
+    """Latest tag and a reason when there is none (skip, no tags, or unreachable)."""
     if os.environ.get("CORVUS_NODE_SKIP_UPDATE_CHECK", "").strip() == "1":
-        return None
+        return None, "version check skipped"
     url = os.environ.get("CORVUS_NODE_VERSION_URL", "").strip() or DEFAULT_TAGS_URL
     req = urllib.request.Request(url, headers={"User-Agent": "corvus"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
-        return None
+        return None, "GitHub unreachable"
     names: list[str] = []
     if isinstance(data, dict) and data.get("tag_name"):
         names.append(str(data["tag_name"]))
@@ -101,17 +102,22 @@ def fetch_github_version(*, timeout: float = 3.0) -> str | None:
             if isinstance(entry, dict) and entry.get("name"):
                 names.append(str(entry["name"]))
     if not names:
-        return None
-    return max(names, key=parse_version).lstrip("vV")
+        return None, "no GitHub tags yet"
+    return max(names, key=parse_version).lstrip("vV"), ""
+
+
+def fetch_github_version(*, timeout: float = 3.0) -> str | None:
+    version, _reason = fetch_github_lookup(timeout=timeout)
+    return version
 
 
 def check_version() -> VersionStatus:
     local = __version__
-    github = fetch_github_version()
+    github, lookup_reason = fetch_github_lookup()
     unreleased = local_unreleased(github)
     if github is None:
         channel = "unreleased" if unreleased or is_source_checkout() else "unknown"
-        reason = "this build is not on GitHub yet" if unreleased else "GitHub unreachable (skipped)"
+        reason = "this build is not on GitHub yet" if unreleased else lookup_reason
         return VersionStatus(local, None, channel, False, reason)
     if unreleased:
         return VersionStatus(

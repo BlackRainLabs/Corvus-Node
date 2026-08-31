@@ -22,7 +22,7 @@ def test_header_names_exit_model_and_empty_context() -> None:
     assert "context: —" in text
     assert "tools: echo" in text
     assert "workspace: /tmp/ws" in text
-    assert "vm stop" in text
+    assert "corvus vm stop" in text
 
 
 def test_chrome_from_snapshot() -> None:

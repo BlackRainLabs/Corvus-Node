@@ -56,16 +56,13 @@ usage() {
 Corvus-Node installer — Black Rain Labs
 https://www.BlackRainLabs.com
 
-  ./install.sh          guided install (your user; sudo when needed)
-  ./install.sh --yes    no "press Enter" pauses
+  ./install.sh          install (your user; password only when needed)
+  ./install.sh --yes    no “press Enter”; also confirm stopping Corvus if it is up
   ./install.sh --help   this text
 
-Sudo is for the Node service (Firecracker jailer, /dev/kvm) and root-owned
-files under $HOME/Corvus-Node. Chat is not root. The model never gets a
-root shell. Group corvus is for the control socket; this installer adds
-you to that group and enters it in this terminal (you do not run newgrp).
-
-The guest jail stays under /var/lib/corvus-node so vsock Unix paths fit.
+Your password is only for setting up isolation. Chat is not root. The
+agent never gets an admin shell. After install, corvus just works in
+this terminal — you do not type extra group commands.
 EOF
 }
 
@@ -73,7 +70,7 @@ banner() {
   cat <<EOF
 ${C_BOLD}
         .--.  Corvus-Node
-       /v  v\\  security-first AI agent harness
+       /v  v\\  a private AI agent for your Linux PC
       /(    )\\
        ^^  ^^
 ${C_RST}${C_DIM}  Black Rain Labs  ·  https://www.BlackRainLabs.com${C_RST}
@@ -85,19 +82,14 @@ sudo_story() {
   cat <<EOF
 ${C_BOLD}Why this script asks for your password${C_RST}
 
-  Node (the host daemon) must run as root to launch Firecracker ${C_BOLD}jailer${C_RST}
-  and open /dev/kvm. Isolation is a privileged VMM, not a user namespace.
+  Corvus runs the agent in a locked-down virtual machine. Setting that
+  up is a system job, so Linux asks for your password. ${C_BOLD}Chat does not.${C_RST}
+  The agent never gets your admin account, and it cannot call tools
+  unless you allow them.
 
-  You do ${C_BOLD}not${C_RST} sudo to chat. After install, corvus vm start / chat / stop
-  are your uid. The agent stays in the guest. Engine 3 cannot call tools.
-
-  Under ${C_BOLD}\$HOME/Corvus-Node${C_RST}, venv/assets/run are root:${GROUP} so root
-  does not execute code you can edit. The jail dir stays /var/lib/corvus-node
-  (short path; vsock sockets have a 107-byte limit).
-
-  This run may: install missing packages; bake a guest disk (no sudo);
-  install Node + systemd; add you to group ${GROUP} and ${C_BOLD}enter that group
-  in this terminal${C_RST} so you do not run newgrp yourself.
+  Files land under ${C_BOLD}\$HOME/Corvus-Node${C_RST}. This run may install missing
+  packages, build the agent environment, start Corvus in the background,
+  and make the ${C_BOLD}corvus${C_RST} command work in this terminal.
 
 EOF
 }
@@ -289,6 +281,31 @@ tree_version() {
   grep -m1 '^version =' "$ROOT/pyproject.toml" | cut -d'"' -f2
 }
 
+source_newer_than_install() {
+  local prefix pkg
+  prefix="$(prefix_path)"
+  if [[ ! -d "$ROOT/src/corvus_node" ]]; then
+    return 1
+  fi
+  pkg="$(find "$prefix/venv/lib" -path '*/site-packages/corvus_node/__init__.py' 2>/dev/null | head -1 || true)"
+  if [[ -z "$pkg" || ! -f "$pkg" ]]; then
+    return 0
+  fi
+  find "$ROOT/src/corvus_node" -type f -newer "$pkg" -print -quit 2>/dev/null | grep -q .
+}
+
+wait_corvus_up() {
+  local sock i
+  sock="$(control_sock)"
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    if [[ -S "$sock" ]]; then
+      return 0
+    fi
+    sleep 0.25
+  done
+  return 1
+}
+
 in_group_session() {
   id -nG 2>/dev/null | tr ' ' '\n' | grep -qx "$GROUP"
 }
@@ -298,6 +315,88 @@ in_group_file() {
   local user
   user="$(id -un)"
   getent group "$GROUP" | awk -F: '{print $4}' | tr ',' '\n' | grep -qx "$user"
+}
+
+confirm_yes() {
+  local prompt="$1" ans lower
+  if [[ "$YES" -eq 1 ]]; then
+    return 0
+  fi
+  if [[ ! -t 0 ]]; then
+    echo "corvus: not a TTY; pass --yes to confirm" >&2
+    return 1
+  fi
+  printf '%s [y/N] ' "$prompt"
+  read -r ans || return 1
+  lower="$(printf '%s' "$ans" | tr '[:upper:]' '[:lower:]')"
+  [[ "$lower" == "y" || "$lower" == "yes" ]]
+}
+
+unit_active() {
+  command -v systemctl >/dev/null || return 1
+  [[ -d /run/systemd/system ]] || return 1
+  systemctl is-active --quiet corvus-node.service 2>/dev/null
+}
+
+control_sock() {
+  echo "$(prefix_path)/run/control.sock"
+}
+
+node_live() {
+  if [[ "${CORVUS_NODE_INSTALL_FAKE_LIVE:-}" == "1" ]]; then
+    return 0
+  fi
+  if unit_active; then
+    return 0
+  fi
+  [[ -S "$(control_sock)" ]]
+}
+
+control_rpc() {
+  local sock type_
+  sock="$1"
+  type_="$2"
+  python3 - "$sock" "$type_" <<'PY' || true
+import json
+import socket
+import sys
+
+path, typ = sys.argv[1], sys.argv[2]
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    s.settimeout(8)
+    s.connect(path)
+    s.sendall((json.dumps({"type": typ, "payload": {}}) + "\n").encode())
+    s.recv(4096)
+except OSError:
+    sys.exit(1)
+PY
+}
+
+stop_running_node() {
+  local sock
+  sock="$(control_sock)"
+  if [[ -S "$sock" ]]; then
+    control_rpc "$sock" stop
+    run_sudo python3 - "$sock" <<'PY' || true
+import json
+import socket
+import sys
+
+path = sys.argv[1]
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    s.settimeout(8)
+    s.connect(path)
+    s.sendall(b'{"type":"stop","payload":{}}\n')
+    s.recv(4096)
+except OSError:
+    sys.exit(0)
+PY
+  fi
+  if unit_active || [[ "${CORVUS_NODE_INSTALL_FAKE_LIVE:-}" == "1" ]]; then
+    run_sudo systemctl stop corvus-node.service
+  fi
 }
 
 if [[ "$SHOW_HELP" -eq 1 ]]; then
@@ -321,7 +420,7 @@ arch="$(uname -m)"
 case "$arch" in
   x86_64 | aarch64) ok "Linux $arch" ;;
   *)
-    need "CPU $arch is not x86_64 or aarch64"
+    need "this CPU isn't supported yet (need 64-bit Intel/AMD or ARM)"
     FAILED=1
     ;;
 esac
@@ -359,7 +458,7 @@ echo
 echo "${C_BOLD}Packages${C_RST}"
 kind="$(pkg_kind)"
 if [[ "$kind" == "none" ]]; then
-  need "Debian/Ubuntu (apt) or Fedora/RHEL (dnf). Install: python3 make curl e2fsprogs mmdebstrap qemu-kvm"
+  need "Debian/Ubuntu or Fedora/RHEL. Install Python 3, make, curl, and virtualization support."
   exit 1
 fi
 
@@ -379,42 +478,42 @@ else
 fi
 
 echo
-echo "${C_BOLD}KVM${C_RST}"
+echo "${C_BOLD}Virtualization${C_RST}"
 if [[ -c /dev/kvm ]]; then
-  skip "/dev/kvm"
+  skip "hardware isolation ready"
 else
-  doing "no /dev/kvm — trying qemu-kvm, then re-check"
+  doing "virtualization not ready — installing support, then re-check"
   if [[ "$kind" == "apt" ]]; then
     with_spin "qemu-kvm" run_sudo apt-get install -y qemu-kvm
   else
     with_spin "qemu-kvm" run_sudo dnf install -y qemu-kvm
   fi
   if [[ "$DRY" -eq 1 ]]; then
-    need "/dev/kvm (dry-run cannot create the device)"
+    need "virtualization (dry-run cannot turn it on)"
     echo
-    need "enable virtualization in firmware if this is a real install"
+    need "turn virtualization on in firmware if this is a real install"
     exit 1
   fi
   if [[ ! -c /dev/kvm ]]; then
-    need "/dev/kvm still missing (enable virtualization in firmware / nested virt). Not baking."
+    need "virtualization still off (enable it in firmware). Not building the agent environment."
     exit 1
   fi
   ok "/dev/kvm"
 fi
 
 echo
-echo "${C_BOLD}Guest disk${C_RST}"
+echo "${C_BOLD}Agent environment${C_RST}"
 if assets_current; then
-  skip "guest assets (hashed kernel, Firecracker, jailer, rootfs)"
+  skip "agent disk"
 else
-  doing "bake guest assets (several minutes the first time; no sudo)"
+  doing "build the agent disk (a few minutes the first time; no password)"
   pause
   if [[ "$DRY" -eq 1 ]]; then
     printf '  %sdry  bash guest/bake.sh%s\n' "$C_DIM" "$C_RST"
   else
-    with_spin "baking" bash "$ROOT/guest/bake.sh"
+    with_spin "building agent disk" bash "$ROOT/guest/bake.sh"
     if ! assets_current; then
-      need "guest assets still incomplete after bake"
+      need "agent disk still incomplete after build"
       exit 1
     fi
     ok "guest assets"
@@ -422,7 +521,39 @@ else
 fi
 
 echo
-echo "${C_BOLD}Node ($HOME/Corvus-Node)${C_RST}"
+echo "${C_BOLD}Corvus ($(prefix_path))${C_RST}"
+STOPPED_LIVE=0
+if node_live; then
+  cat <<EOF
+${C_BOLD}Corvus is already running${C_RST}
+
+  Corvus is up right now. We need to stop it before replacing the install
+  (otherwise you would mix old and new files).
+
+  If you say yes, we will:
+    1. End the agent session if one is running
+    2. Stop Corvus in the background (password may be asked)
+    3. Finish this install, then start Corvus again
+
+  To only end the chat session and leave Corvus ready, cancel and run:
+    corvus vm stop
+
+EOF
+  if [[ "$DRY" -eq 1 ]]; then
+    doing "would stop Corvus (dry-run)"
+  elif confirm_yes "Stop Corvus, then continue install?"; then
+    doing "stop Corvus"
+    stop_running_node
+    STOPPED_LIVE=1
+    ok "Corvus stopped"
+  else
+    need "install cancelled; Corvus is still running"
+    exit 2
+  fi
+else
+  skip "Corvus is not running"
+fi
+
 WANT_VER="$(tree_version)"
 HAVE_VER="$(installed_version || true)"
 UNIT="/etc/systemd/system/corvus-node.service"
@@ -436,29 +567,47 @@ fi
 if [[ ! -f "$(prefix_path)/env" ]]; then
   NEED_NODE=1
 fi
+if source_newer_than_install; then
+  NEED_NODE=1
+fi
 if [[ "$NEED_NODE" -eq 0 ]]; then
-  skip "Node $WANT_VER at $(prefix_path)"
+  skip "Corvus $WANT_VER at $(prefix_path)"
 else
-  doing "privileged install → $(prefix_path) (root-owned venv; jail /var/lib/corvus-node)"
+  doing "install Corvus into $(prefix_path)"
   pause
   export CORVUS_NODE_PREFIX="${CORVUS_NODE_PREFIX:-$(prefix_path)}"
   with_spin "install Node" run_sudo env CORVUS_NODE_PREFIX="$CORVUS_NODE_PREFIX" bash "$ROOT/packaging/install.sh"
-  ok "Node $WANT_VER"
+  ok "Corvus $WANT_VER"
+  if [[ "$DRY" -eq 0 ]] && ! wait_corvus_up; then
+    need "Corvus did not come up after install; sudo systemctl status corvus-node"
+  fi
+fi
+
+if [[ "$STOPPED_LIVE" -eq 1 && "$NEED_NODE" -eq 0 && "$DRY" -eq 0 ]]; then
+  doing "start Corvus (it was running before this install)"
+  run_sudo systemctl start corvus-node.service
+  if wait_corvus_up; then
+    ok "Corvus started"
+  else
+    need "Corvus did not come up; ./install.sh again"
+  fi
 fi
 
 LOCAL_BIN="${HOME}/.local/bin"
 if [[ "$DRY" -eq 1 ]]; then
-  skip "PATH symlink (dry-run)"
+  skip "PATH wrapper (dry-run)"
 else
   mkdir -p "$LOCAL_BIN"
-  if [[ -e "$(prefix_path)/bin/corvus" ]]; then
-    ln -sfn "$(prefix_path)/bin/corvus" "$LOCAL_BIN/corvus"
-    ln -sfn "$(prefix_path)/bin/corvus" "$LOCAL_BIN/corvus-node"
-    if [[ ":$PATH:" == *":$LOCAL_BIN:"* ]]; then
-      skip "PATH $LOCAL_BIN/corvus"
-    else
-      ok "linked $LOCAL_BIN/corvus (add $LOCAL_BIN to PATH if corvus is not found)"
-    fi
+  if [[ -x /usr/local/bin/corvus ]]; then
+    ln -sfn /usr/local/bin/corvus "$LOCAL_BIN/corvus"
+    ln -sfn /usr/local/bin/corvus "$LOCAL_BIN/corvus-node"
+    skip "PATH /usr/local/bin/corvus"
+  elif [[ -r "$(prefix_path)/bin/corvus" ]]; then
+    install -m 0755 "$(prefix_path)/bin/corvus" "$LOCAL_BIN/corvus"
+    ln -sfn "$LOCAL_BIN/corvus" "$LOCAL_BIN/corvus-node"
+    ok "PATH $LOCAL_BIN/corvus"
+  else
+    doing "wait for /usr/local/bin/corvus after privileged install"
   fi
 fi
 
@@ -466,58 +615,63 @@ echo
 echo "${C_BOLD}Group $GROUP${C_RST}"
 if in_group_session; then
   skip "group $GROUP (this session)"
-elif in_group_file || [[ "$DRY" -eq 1 ]]; then
-  if [[ "$DRY" -eq 1 ]]; then
-    printf '  %sdry  exec newgrp %s%s\n' "$C_DIM" "$GROUP" "$C_RST"
-  else
-    doing "this terminal is not in $GROUP yet — entering it for you (no newgrp to type)"
-  fi
+elif in_group_file; then
+  skip "group $GROUP (corvus uses it automatically)"
+elif [[ "$DRY" -eq 1 ]]; then
+  skip "group $GROUP (dry-run)"
 else
-  doing "add $(id -un) to $GROUP"
-  run_sudo true
-  if in_group_file; then
-    skip "group $GROUP (passwd)"
-  else
-    need "could not add $(id -un) to $GROUP"
-    exit 1
+  need "user $(id -un) is not in $GROUP after install"
+  exit 1
+fi
+
+status_cmd() {
+  local bin="" line out=""
+  if [[ -x /usr/local/bin/corvus ]]; then
+    bin=/usr/local/bin/corvus
+  elif [[ -x "${HOME}/.local/bin/corvus" ]]; then
+    bin="${HOME}/.local/bin/corvus"
+  elif command -v corvus >/dev/null; then
+    bin="$(command -v corvus)"
   fi
+  if [[ -z "$bin" ]]; then
+    need "corvus command not found"
+    return 0
+  fi
+  if ! out="$("$bin" status --brief 2>/dev/null)"; then
+    out="$("$bin" status 2>/dev/null || true)"
+  fi
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      Node:\ up*)
+        printf '  %s%s%s\n' "$C_OK" "$line" "$C_RST"
+        ;;
+      Node:\ down*|Hint:*)
+        printf '  %s%s%s\n' "$C_NEED" "$line" "$C_RST"
+        ;;
+      VM:*)
+        printf '  %s\n' "$line"
+        ;;
+    esac
+  done <<< "$out"
+}
+
+if [[ "$DRY" -eq 0 ]]; then
+  echo
+  echo "${C_BOLD}Status${C_RST}"
+  echo
+  status_cmd
 fi
 
 echo
-echo "${C_BOLD}Ready${C_RST}"
+echo "${C_BOLD}You're set${C_RST}"
 cat <<EOF
-  ${C_BOLD}corvus status${C_RST}
-  ${C_BOLD}corvus vm start${C_RST}
-  ${C_BOLD}corvus chat${C_RST}     ${C_DIM}# /exit leaves; VM stays up${C_RST}
-  ${C_BOLD}corvus stop${C_RST}     ${C_DIM}# guest VM down; Node stays up${C_RST}
+  ${C_BOLD}corvus status${C_RST}     ${C_DIM}# is Corvus up?${C_RST}
+  ${C_BOLD}corvus vm start${C_RST}   ${C_DIM}# start the isolated agent${C_RST}
+  ${C_BOLD}corvus chat${C_RST}       ${C_DIM}# talk to it; type /exit when done${C_RST}
+  ${C_BOLD}corvus vm stop${C_RST}    ${C_DIM}# end the session; Corvus stays ready${C_RST}
+  ${C_BOLD}corvus stop${C_RST}       ${C_DIM}# shut everything down (asks first)${C_RST}
 
   ${C_DIM}Black Rain Labs  ·  https://www.BlackRainLabs.com${C_RST}
 
 EOF
-
-if [[ "$DRY" -eq 1 ]]; then
-  exit 0
-fi
-
-status_cmd() {
-  local bin
-  bin="$(prefix_path)/bin/corvus"
-  if [[ ! -x "$bin" ]]; then
-    bin="corvus"
-  fi
-  if in_group_session; then
-    "$bin" status || true
-  elif command -v sg >/dev/null; then
-    sg "$GROUP" -c "$bin status" || true
-  else
-    "$bin" status || true
-  fi
-}
-
-if [[ -t 0 ]] && ! in_group_session && in_group_file && command -v newgrp >/dev/null; then
-  echo "${C_DIM}This shell will continue in group $GROUP so corvus can open the control socket.${C_RST}"
-  exec newgrp "$GROUP"
-fi
-
-status_cmd
 exit 0

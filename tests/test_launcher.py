@@ -13,6 +13,7 @@ from corvus_node.vm.launcher import (
     ROOT_INSTANCE_DIR,
     UNIX_PATH_MAX,
     IsolationUnavailable,
+    _place,
     build_jailer_argv,
     build_vm_config,
     ensure_runtime,
@@ -185,3 +186,14 @@ def test_ensure_runtime_fails_without_kernel(
     monkeypatch.setenv("CORVUS_NODE_ROOTFS", str(tmp_path / "missing-rootfs"))
     with pytest.raises(IsolationUnavailable):
         ensure_runtime()
+
+
+def test_place_copy_does_not_share_inode(tmp_path: Path) -> None:
+    src = tmp_path / "vmlinux"
+    src.write_bytes(b"kernel")
+    dest = tmp_path / "jail" / "vmlinux"
+    dest.parent.mkdir()
+    _place(src, dest)
+    assert dest.read_bytes() == b"kernel"
+    src.write_bytes(b"changed")
+    assert dest.read_bytes() == b"kernel"
