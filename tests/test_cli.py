@@ -123,6 +123,14 @@ def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert capsys.readouterr().out.strip() == __version__
 
 
+def test_version_strings_agree() -> None:
+    root = Path(__file__).resolve().parents[1]
+    pyproject = (root / "pyproject.toml").read_text()
+    assert f'version = "{__version__}"' in pyproject
+    readme = (root / "README.md").read_text()
+    assert f"**Version {__version__}**" in readme
+
+
 def test_status_without_node(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
