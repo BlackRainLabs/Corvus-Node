@@ -4,13 +4,13 @@
 **Division:** Research & Development Division
 **Last Updated:** 2026-08-31
 
-## Threat model (v0.1.7)
+## Threat model (v0.1.8)
 
 - **Guest is hostile.** Tool code, a compromised model client, and the rest of the microVM are untrusted. Node is the policy point. Engines have no NIC.
 - **Operator is trusted** to write launch rules (CLI). Those rules still go through the filter.
 - **Host root is out of scope.** If this Linux box is owned, they dump RAM. SEV-SNP/TDX is a different product.
 
-## What v0.1.7 claims
+## What v0.1.8 claims
 
 - No TCP product mode. Launch is jailer-only. Assets are SHA-256 checked on every run.
 - The guest image does not contain host Node, policy, LLM, audit, or launcher.
@@ -22,7 +22,7 @@
 - `corvus vm start` holds one jailed VM until `vm stop` (`session_end`). `corvus start` brings Node up and asks before the guest (Enter skips the VM; `--yes` starts it). `chat` is a live session until `/exit`; that detaches without tearing the VM down. `corvus vm stop` shuts down the guest only (confirmation; Node stays idle). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`). `status` reports Node and VM separately.
 - `corvus update` installs a newer GitHub **release wheel** into `$HOME/Corvus-Node` (the installed CLI; GUI extras if they install). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then pip-installs, then starts Node again. It refuses when the local tree is unreleased (dirty, ahead of origin, or version newer than GitHub), so internal pre-PR runs do not downgrade from GitHub. It does not `git pull` a checkout. `./install.sh` from a git tree installs that checkout and tries host Qt libraries; missing GUI deps do not abort the CLI/Node install. A version bump merged to `main` publishes a GitHub Release (one version string, one wheel). Later merges at the same version do not replace it. The splash (`corvus gui`) is a local display; it does not talk to Node and does not write launch rules.
 
-## What v0.1.7 does not claim
+## What v0.1.8 does not claim
 
 - Four isolated engine processes inside the guest
 - Confidential computing against the host

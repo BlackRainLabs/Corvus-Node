@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corvus-node"
-version = "0.1.7"
+version = "0.1.8"
 description = "Corvus-Node — host Node, four engines in Firecracker, vsock only"
 readme = "README.md"
 requires-python = ">=3.12"

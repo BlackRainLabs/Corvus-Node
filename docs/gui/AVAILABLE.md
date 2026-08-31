@@ -11,7 +11,7 @@
 
 The operator GUI is a thin client of **Node**, same layer as `corvus`. It talks only over the host **AF_UNIX** control socket (`0660`, group `corvus`). It does not talk to Firecracker, vsock, or guest engines.
 
-v0.1.7 splash (`corvus gui`) does **not** call Node. This list is the contract for later GUI work. A verb that is not here stays fail-closed.
+v0.1.8 splash (`corvus gui`) does **not** call Node. This list is the contract for later GUI work. A verb that is not here stays fail-closed.
 
 GUI agents must not edit Node, guest, jailer, or RBAC. Ask for a surface in [gui/REQUESTS.md](../../gui/REQUESTS.md). Core ships it here or rejects it.
 
@@ -30,6 +30,6 @@ Each frame is `{"type": "<name>", "payload": { ... }}` plus a newline. Unknown t
 | `user` | after `chat_attach` | `agent` then `waiting` | `{ "text": "..." }` — one operator turn. `error` `stopped` if the guest ended |
 | `stop` (on an attached chat) | attached | `stop_ok` | Ends the guest from the chat connection |
 
-The CLI also writes launch rules via `settings` files on the host (`$XDG_CONFIG_HOME/corvus-node/launch.json`). That is the **firewall console**. The GUI must not write those rules unless the principal is bound to role `operator` (POLICY). The v0.1.7 splash does not write rules.
+The CLI also writes launch rules via `settings` files on the host (`$XDG_CONFIG_HOME/corvus-node/launch.json`). That is the **firewall console**. The GUI must not write those rules unless the principal is bound to role `operator` (POLICY). The splash does not write rules.
 
 **Black Rain Labs - Research & Development Division**
