@@ -27,7 +27,7 @@ If that download fails, there is no GitHub Release yet. Wait for one, or see [Fo
 
 The installer may ask for your password to set up isolation. **Chatting does not use sudo.** The agent never gets your admin account.
 
-The installer also sets up the GUI runtime (PySide/Qt). Later, `corvus update` installs a newer GitHub release for both the CLI and the GUI (asks before replacing). Re-run `./install.sh` from the folder you unpacked if you still have it — including if `corvus gui` says Qt libraries are missing. If Corvus-Node is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
+The installer tries to set up the GUI runtime (PySide/Qt). If that is not available, the `corvus` CLI still works. Later, `corvus update` installs a newer GitHub release for the CLI (and GUI extras when they install). Re-run `./install.sh` from the folder you unpacked if you still have it — including if `corvus gui` says Qt libraries are missing. If Corvus-Node is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
 
 ## First run
 

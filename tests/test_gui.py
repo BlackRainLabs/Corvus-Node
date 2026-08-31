@@ -77,6 +77,9 @@ def test_release_ships_gui_runtime_only() -> None:
     assert "already released" in workflow
     pyproject = (ROOT / "pyproject.toml").read_text()
     assert "PySide6" in pyproject
+    assert 'gui = ["PySide6"]' in pyproject
+    required = pyproject.split("[project.optional-dependencies]", 1)[0]
+    assert "PySide6" not in required
     assert '"gui/corvus_gui" = "corvus_gui"' in pyproject
     assert (ROOT / "gui" / "corvus_gui" / "splash.py").is_file()
     assert (ROOT / "gui" / "REQUESTS.md").is_file()
@@ -88,4 +91,7 @@ def test_installer_lists_qt_host_libs() -> None:
     assert "libxcb-cursor0" in text
     assert "mesa-libGL" in text
     assert "qt_host_specs" in text
+    assert "missing_qt_pkgs" in text
+    assert "optional for corvus gui" in text
+    assert "CLI is available" in text
     assert "corvus gui" in text

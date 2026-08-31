@@ -4,6 +4,21 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - installer does not fail closed without GUI deps
+
+**Documents Modified:**
+- `pyproject.toml`, `packaging/install.sh`, `packaging/operator-install.sh`
+- `src/corvus_node/cli.py`, `tests/test_gui.py`, `tests/test_operator_install.py`
+- `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- `docs/architecture/OVERVIEW.md`, `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`, `CHANGES.md`
+
+**Key Changes:**
+- PySide6 is an optional extra (`gui`). `./install.sh` and `corvus update` still try PySide/Qt, but a miss does not abort: the CLI and Node stay available. `corvus gui` still fail-closes if PySide/Qt is missing.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - splash duration; Releases stay one version, one wheel
 
 **Documents Modified:**

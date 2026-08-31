@@ -54,6 +54,9 @@ install -d -m 0755 -o root -g "$GROUP" "$BIN_DIR"
 "$VENV/bin/python" -m pip install --upgrade pip
 PIP_SRC="${CORVUS_NODE_PIP_SRC:-$ROOT}"
 "$VENV/bin/python" -m pip install "$PIP_SRC"
+if ! "$VENV/bin/python" -m pip install PySide6; then
+  echo "corvus: GUI extras skipped (PySide6); CLI is available (corvus gui needs them)" >&2
+fi
 chown -R root:"$GROUP" "$VENV"
 chmod -R u=rwX,g=rX,o= "$VENV"
 

@@ -646,10 +646,22 @@ def _start_systemd_unit() -> int:
 
 
 def _pip_upgrade(ref: str) -> int:
-    return subprocess.run(
+    rc = subprocess.run(
         [sys.executable, "-m", "pip", "install", "--upgrade", ref],
         check=False,
     ).returncode
+    if rc != 0:
+        return rc
+    gui_rc = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--upgrade", "PySide6"],
+        check=False,
+    ).returncode
+    if gui_rc != 0:
+        print(
+            "corvus: GUI extras skipped (PySide6); CLI is available (corvus gui needs them)",
+            file=sys.stderr,
+        )
+    return 0
 
 
 def _execute_product_stop() -> int:

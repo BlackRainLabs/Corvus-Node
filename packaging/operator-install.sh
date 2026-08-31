@@ -77,7 +77,8 @@ Users: unpack corvus-node-install.tar.gz from the GitHub Release, then
 this checkout. --release always fetches the latest GitHub wheel.
 If Corvus-Node is already installed, you can upgrade or keep the current
 version. Your password is only for setting up isolation. Chat is not root.
-The installer also installs the GUI runtime (PySide/Qt). After install, corvus just
+The installer tries to install the GUI runtime (PySide/Qt). If that is not
+available, the corvus CLI still works. After install, corvus just
 works in this terminal — you do not type extra group commands.
 EOF
 }
@@ -104,9 +105,9 @@ ${C_BOLD}Why this script asks for your password${C_RST}
   unless you allow them.
 
   Files land under ${C_BOLD}\$HOME/Corvus-Node${C_RST}. This run may install missing
-  packages (including GUI libraries for ${C_BOLD}corvus gui${C_RST}), build the agent
-  environment, start Corvus-Node in the background, and make the ${C_BOLD}corvus${C_RST}
-  command work in this terminal.
+  packages, try GUI libraries for ${C_BOLD}corvus gui${C_RST} (optional; the CLI still
+  works without them), build the agent environment, start Corvus-Node in the
+  background, and make the ${C_BOLD}corvus${C_RST} command work in this terminal.
 
 EOF
 }
@@ -296,6 +297,9 @@ missing_pkgs() {
     fi
     echo "$pkg"
   done
+}
+
+missing_qt_pkgs() {
   local so pkg
   while read -r so pkg; do
     [[ -z "${so:-}" || -z "${pkg:-}" ]] && continue
@@ -622,6 +626,28 @@ else
     with_spin "dnf install" run_sudo dnf install -y "${MISSING[@]}"
   fi
   ok "host packages"
+fi
+
+echo
+echo "${C_BOLD}GUI libraries${C_RST}"
+mapfile -t QT_MISSING < <(missing_qt_pkgs | awk 'NF')
+if [[ ${#QT_MISSING[@]} -eq 0 ]]; then
+  skip "GUI libraries ($kind)"
+else
+  doing "install ${QT_MISSING[*]} ($kind — optional for corvus gui)"
+  pause
+  qt_rc=0
+  if [[ "$kind" == "apt" ]]; then
+    with_spin "apt-get update" run_sudo apt-get update -qq || true
+    with_spin "GUI apt-get install" run_sudo apt-get install -y "${QT_MISSING[@]}" || qt_rc=$?
+  else
+    with_spin "GUI dnf install" run_sudo dnf install -y "${QT_MISSING[@]}" || qt_rc=$?
+  fi
+  if [[ "$qt_rc" -eq 0 ]]; then
+    ok "GUI libraries"
+  else
+    need "GUI libraries skipped; corvus CLI is available (corvus gui needs them)"
+  fi
 fi
 
 echo

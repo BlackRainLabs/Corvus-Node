@@ -14,7 +14,7 @@
 - Operator CLI command is `corvus` (`start`, `vm start|stop|status`, `chat`, `gui`, `status`, `settings`, `run --once`, `update`)
 - `corvus start` brings Node up and asks before the guest (Enter skips the VM). `corvus vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd)
 - `corvus gui` splash (PySide6). Fail-closes if Qt/PySide is missing. Does not talk to Node. Does not write launch rules
-- Installer installs PySide6 (wheel dependency) and host xcb/EGL/fontconfig libs. `corvus update` upgrades the same wheel (CLI and GUI)
+- Installer tries PySide6 (optional extra) and host xcb/EGL/fontconfig libs; a miss does not abort (CLI stays). `corvus update` upgrades the wheel, then tries GUI extras
 - Releases ship `gui/corvus_gui/` only (not REQUESTS.md or GUI workflow docs)
 - GUI/core contract: `docs/gui/AVAILABLE.md` (core) and `gui/REQUESTS.md` (GUI team)
 - Host AF_UNIX control socket (group `corvus`); guest stays AF_VSOCK

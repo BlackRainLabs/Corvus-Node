@@ -25,7 +25,7 @@ Same repo, two trees. Core owns `src/corvus_node/`, `guest/`, `packaging/`, and 
 
 GitHub Release artifacts include `gui/corvus_gui/` only. Workflow markdown stays in git.
 
-`./install.sh` installs PySide6 (wheel dependency) and host Qt libraries. `corvus gui` fail-closes if those are missing. `corvus update` pip-installs the same wheel (CLI and GUI).
+`./install.sh` tries PySide6 (optional extra) and host Qt libraries. Missing GUI deps do not abort the install; the CLI still works. `corvus gui` fail-closes if those are missing. `corvus update` pip-installs the wheel, then tries GUI extras.
 
 Dev loop (no VM):
 
