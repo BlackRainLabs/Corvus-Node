@@ -45,6 +45,9 @@ case "$ARCH" in
     ;;
 esac
 
+echo "corvus: downloading Firecracker, a guest kernel, and baking a disk image."
+echo "corvus: the first run often takes several minutes (Debian rootfs)."
+
 mkdir -p "$(dirname "$KERNEL_OUT")" "$(dirname "$ROOTFS_OUT")" "$CACHE"
 
 WORK=""
@@ -230,4 +233,4 @@ echo "kernel: $KERNEL_OUT"
 echo "rootfs: $ROOTFS_OUT"
 echo "firecracker: $FC_OUT"
 echo "jailer: $JAILER_OUT"
-echo "set CORVUS_NODE_KERNEL / CORVUS_NODE_ROOTFS / CORVUS_NODE_FIRECRACKER / CORVUS_NODE_JAILER, or run from the repo root."
+echo "Next: sudo make install   (then: newgrp corvus; corvus status; corvus vm start; corvus chat)"

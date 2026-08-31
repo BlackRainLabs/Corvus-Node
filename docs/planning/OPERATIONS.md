@@ -8,6 +8,25 @@
 
 # Operations
 
+## First run (operator)
+
+Linux with KVM, Python 3.12+, and a guest disk. Sudo is **once**.
+
+```bash
+make check
+make guest-assets
+sudo make install
+newgrp corvus
+corvus status
+corvus vm start
+corvus chat
+corvus stop
+```
+
+`make check` reports missing packages or `/dev/kvm` before a long bake. `stop` shuts down the guest VM; the Node systemd unit stays up. Operator `vm` / `chat` / `run` do not use sudo. If Node is down, those verbs fail closed.
+
+Full command list and paths are below. Product overview for operators is [README.md](../../README.md).
+
 ## Dev loop (no VM)
 
 ```bash

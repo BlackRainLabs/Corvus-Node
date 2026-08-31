@@ -4,6 +4,23 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - Operator first-run docs and host check
+
+**Documents Modified:**
+- `README.md`, `CONTRIBUTING.md`, `CHANGES.md`, `AGENTS.md`
+- `Makefile`, `docs/planning/OPERATIONS.md`, `guest/README.md`, `guest/bake.sh`
+- `packaging/install.sh`, `packaging/check-prereqs.sh`
+- `src/corvus_node/node/info.py`
+- `tests/test_check_prereqs.py`
+
+**Key Changes:**
+- README leads with clone → check → bake → install → `vm start` / `chat` / `stop` for an operator. Architecture, reference docs, and contribute sit below. Version stays 0.1.5.
+- `make check` (`packaging/check-prereqs.sh`) reports KVM, Python 3.12, bake tools, and next steps. Bare `make` prints the same operator cheat sheet. Install and bake print what to run next; missing guest assets are called out instead of a silent incomplete install.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - AGPLv3; stay on v0.1.5
 
 **Documents Modified:**

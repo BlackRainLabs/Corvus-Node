@@ -14,9 +14,10 @@ LLM_NAME = "stub"
 CLI_NAME = "corvus"
 
 HELP_BLURB = (
-    f"Corvus-Node {__version__} — single-agent harness ({LLM_NAME} LLM).\n"
-    "CLI talks only to Node (same layer as the GUI). Node owns jailer, vsock, and RBAC.\n"
-    "No TCP product mode."
+    f"Corvus-Node {__version__} — one agent in a Firecracker VM ({LLM_NAME} LLM).\n"
+    "Install once (sudo make install), then no sudo:\n"
+    "  corvus vm start   →   corvus chat   →   /exit   →   corvus stop\n"
+    "CLI talks only to Node. Node owns jailer, vsock, and RBAC. No TCP product mode."
 )
 
 HELP_EPILOG = (

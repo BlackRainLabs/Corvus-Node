@@ -93,7 +93,27 @@ if command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]; then
   systemctl enable --now corvus-node.service
 fi
 
+missing=0
+for p in "$KERNEL" "$ROOTFS" "$FIRECRACKER" "$JAILER"; do
+  if [[ ! -e "$p" ]]; then
+    echo "corvus: missing guest asset: $p" >&2
+    missing=1
+  fi
+done
+
 echo "corvus: installed to $PREFIX (CLI: $BIN_DIR/corvus)."
-echo "If you were added to group $GROUP, log out and back in (or: newgrp $GROUP)."
-echo "Then: corvus vm start   # no sudo; stop shuts down the guest VM first"
-echo "Updates: corvus update  (sudo if the prefix is not writable; skipped on unreleased trees)"
+if [[ "$missing" -ne 0 ]]; then
+  echo "corvus: guest assets were not in $CACHE."
+  echo "corvus: from this checkout: make guest-assets && sudo make install"
+  echo "corvus: corvus status will show Isolation: not ready until assets are installed."
+else
+  echo
+  echo "Next (no sudo):"
+  echo "  newgrp $GROUP          # or log out and back in, once"
+  echo "  corvus status          # Node up, Isolation: ready"
+  echo "  corvus vm start"
+  echo "  corvus chat            # type a line; /exit to leave"
+  echo "  corvus stop            # shuts down the guest VM; Node stays up"
+  echo
+  echo "Updates: corvus update   (sudo if the prefix is not writable; skipped on unreleased trees)"
+fi
