@@ -1,6 +1,6 @@
 # Corvus-Node
 
-**Corvus** is a private AI agent for your Linux PC.
+**Corvus-Node** is a private AI agent for your Linux PC. The operator command is `corvus` — that is a short name for the CLI, not the product.
 
 You talk to it in the terminal. It stays in its own locked room — a tiny virtual machine — and cannot wander the rest of your computer. You choose whether it may see a folder. The model never gets a free pass around those rules.
 
@@ -27,40 +27,42 @@ If that download fails, there is no GitHub Release yet. Wait for one, or see [Fo
 
 The installer may ask for your password to set up isolation. **Chatting does not use sudo.** The agent never gets your admin account.
 
-Later, `corvus update` installs a newer GitHub release (asks before replacing). Re-run `./install.sh` from the folder you unpacked if you still have it. If Corvus is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
+Later, `corvus update` installs a newer GitHub release (asks before replacing). Re-run `./install.sh` from the folder you unpacked if you still have it. If Corvus-Node is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
 
 ## First run
 
 ```bash
-corvus status              # is Corvus up?
+corvus status              # is Corvus-Node up?
+corvus start               # bring Corvus-Node up; asks before the VM (Enter skips)
 corvus vm start            # start the isolated agent
 corvus chat                # type a line, then /exit
-corvus vm stop             # end the session; Corvus stays ready
+corvus vm stop             # end the session; Corvus-Node stays ready
 ```
 
-`corvus` is on your PATH after install. If a command says Corvus is not running, start it with `sudo systemctl start corvus-node`, or run `./install.sh` from the folder you unpacked.
+`corvus` is on your PATH after install. If a command says Corvus-Node is not running, `corvus start`, or `sudo systemctl start corvus-node`, or run `./install.sh` from the folder you unpacked.
 
 ### Everyday commands
 
 | Command | What it does |
 | --- | --- |
-| `corvus status` | Is Corvus up? Is an agent session running? |
-| `corvus vm start` | Start the isolated agent (`corvus start` is the same) |
+| `corvus status` | Is Corvus-Node up? Is an agent session running? |
+| `corvus start` | Start Corvus-Node. Asks before starting the VM; Enter skips. `--yes` starts the VM too |
+| `corvus vm start` | Start the isolated agent |
 | `corvus chat` | Talk to it until you type `/exit` (the session stays up) |
-| `corvus vm stop` | End the agent session; Corvus stays ready in the background (asks first) |
-| `corvus stop` | End the session **and** shut Corvus down (asks first) |
+| `corvus vm stop` | End the agent session; Corvus-Node stays ready in the background (asks first) |
+| `corvus stop` | End the session **and** shut Corvus-Node down (asks first) |
 | `corvus vm status` | Agent session only |
 | `corvus run --once "hello"` | One reply, then done |
-| `corvus update` | Install a newer GitHub release (asks before replacing; stops Corvus first if it is running) |
+| `corvus update` | Install a newer GitHub release (asks before replacing; stops Corvus-Node first if it is running) |
 
 Optional: `--tools echo` lets the agent echo text back. `--workspace /path --tools file_read` lets it read files in that folder only — nowhere else. `corvus settings` remembers those choices. A running session does not pick up new rules; `vm stop` then `vm start`. Add `--yes` to skip the “are you sure?” prompt on stop or update.
 
 ### If something goes wrong
 
 - The installer prints red **need** lines — install what it asks, turn virtualization on in firmware if it says so, run `./install.sh` again.
-- `corvus status` shows `Node: down` — Corvus is not running in the background. `sudo systemctl start corvus-node` (or `./install.sh` from the folder you unpacked).
+- `corvus status` shows `Node: down` — Corvus-Node is not running in the background. `corvus start` (or `sudo systemctl start corvus-node`, or `./install.sh` from the folder you unpacked).
 - `Isolation: not ready` — run `./install.sh` again so the agent environment finishes installing.
-- `chat` / `vm start` refuse to run if Corvus is down. That is intentional.
+- `chat` / `vm start` refuse to run if Corvus-Node is down. That is intentional. `corvus start` brings Corvus-Node up and asks before the VM.
 - Permission denied — re-run `./install.sh`. After that, `corvus` should just work.
 
 ## What this preview includes

@@ -106,8 +106,8 @@ def test_dry_run_reports_python_already_current() -> None:
 
 def test_installer_script_stops_a_running_node() -> None:
     text = SCRIPT.read_text()
-    assert "Corvus is already running" in text
-    assert "Stop Corvus, then continue install?" in text
+    assert "Corvus-Node is already running" in text
+    assert "Stop Corvus-Node, then continue install?" in text
     assert "Upgrade the install?" in text
     assert "this git checkout" in text
     assert "--release" in text
@@ -117,6 +117,7 @@ def test_installer_script_stops_a_running_node() -> None:
     assert "wait_corvus_up" in text
     assert "status --brief" in text
     assert 'echo "${C_BOLD}Status${C_RST}"' in text
+    assert "asks before the VM" in text
 
 
 def test_release_and_local_flags_conflict() -> None:

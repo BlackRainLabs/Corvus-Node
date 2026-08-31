@@ -15,12 +15,13 @@ Linux with KVM. Sudo only when the installer needs it. `corvus` uses group `corv
 ```bash
 ./install.sh
 corvus status
-corvus vm start
+corvus start              # Node; asks before the VM (Enter skips)
+corvus vm start           # isolated agent, no extra prompt
 corvus chat
 corvus vm stop
 ```
 
-`./install.sh` from a **git checkout** (or an unpacked release snapshot that still has `src/`) installs **this tree**. `--release`, or a directory with no Corvus source, fetches the GitHub **release wheel**. The installer does **not** tell you GitHub has a newer version; `corvus status` and `corvus update` do that. If Corvus is already installed, the installer asks to upgrade or keep the current version. It puts `corvus` on PATH (`/usr/local/bin/corvus`). Re-runs skip green already-up-to-date steps. If Node is already running **and** this run will replace files, the installer explains and asks before shutting it down (guest then systemd), then continues and starts Node again. The end of the installer prints a **Status** block (`corvus status --brief`: Node and VM only) then **You're set**. `vm stop` shuts down the guest VM (confirmation); the Node systemd unit stays up. `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). If Node is down, `vm` / `chat` fail closed.
+`./install.sh` from a **git checkout** (or an unpacked release snapshot that still has `src/`) installs **this tree**. `--release`, or a directory with no Corvus-Node source, fetches the GitHub **release wheel**. The installer does **not** tell you GitHub has a newer version; `corvus status` and `corvus update` do that. If Corvus-Node is already installed, the installer asks to upgrade or keep the current version. It puts `corvus` on PATH (`/usr/local/bin/corvus`). Re-runs skip green already-up-to-date steps. If Node is already running **and** this run will replace files, the installer explains and asks before shutting it down (guest then systemd), then continues and starts Node again. The end of the installer prints a **Status** block (`corvus status --brief`: Node and VM only) then **You're set**. `vm stop` shuts down the guest VM (confirmation); the Node systemd unit stays up. `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). If Node is down, `vm` / `chat` fail closed.
 
 Make path (same privileged inner script): `make check`, `make guest-assets`, `sudo make install`. Product overview: [README.md](../../README.md).
 
@@ -31,11 +32,13 @@ Make path (same privileged inner script): `make check`, `make guest-assets`, `su
 ```bash
 make test
 make lint
-./install.sh          # this tree; say yes to upgrade if Corvus is already installed
+./install.sh          # this tree; say yes to upgrade if Corvus-Node is already installed
 make smoke            # Node must be up; no guest already running
 ```
 
 `make test` refuses a frozen `GIT_AUTHOR_DATE` / `GIT_COMMITTER_DATE`. Unset them before you commit. Do not copy those dates from an older commit when rewriting.
+
+The product is **Corvus-Node**. `corvus` is only the operator CLI. Never call this product Corvus (a different creator's project). Commits and docs are **Black Rain Labs - Research & Development Division**. Strip Cursor / AI trailers (`Co-authored-by: Cursor`, Made by, Created by) with `packaging/strip-ai-trailers.sh`. Human GitHub Contributors are allowed. Do not add Cursor as an author.
 
 Do not use `corvus update` or `./install.sh --release` to pick up uncommitted clone work.
 
@@ -65,6 +68,7 @@ Every version ships a runnable operator CLI. `corvus --help` and `corvus status`
 ./install.sh
 # or: make guest-assets && sudo make install
 corvus status
+corvus start              # Node; asks before the VM (Enter skips)
 corvus vm start
 ```
 
@@ -101,6 +105,7 @@ Hashed kernel, rootfs, jailer, Firecracker, and KVM are required for a guest VM.
 
 ```bash
 corvus status
+corvus start
 corvus vm start
 corvus chat
 corvus vm stop
@@ -111,7 +116,7 @@ corvus vm start --workspace /path/to/tree --tools file_read,file_write
 corvus update
 ```
 
-If the Node service is not running, `vm` / `chat` **fail closed** (`./install.sh`). `status` still runs and shows `Node: down`. There is no TCP fallback and no raw Firecracker.
+If the Node service is not running, `corvus start` brings it up (asks before the VM). `vm` / `chat` **fail closed** until Node is up. `status` still runs and shows `Node: down`. There is no TCP fallback and no raw Firecracker.
 
 Default vsock port: `4040`. Guest CID is assigned at launch. `--workspace /path` is a live host directory Node may read and write after RBAC (one path). The guest does not mount that folder. Writes land on the host immediately. A later turn, or your editor, sees the same files.
 
@@ -122,9 +127,9 @@ corvus run --once --workspace /path/to/tree --tools file_read "review notes.txt"
 corvus run --once --workspace /path/to/tree --tools file_write "edit notes.txt to 'done'"
 ```
 
-`run --once "hello"` is one chat turn then exit. If the Node service is up it uses that VM path; if you are root and the service is down (legacy smoke) it still runs in-process. `vm start` boots a guest on the idle Node service. `corvus vm stop` shuts down the guest only (`session_end`, then reap jailer; confirmation; Node stays idle). `corvus stop` does that, then stops the Node systemd unit (confirmation; sudo for `systemctl stop`). `vm status` is the guest only. `status` leads with Node and VM, then this preview, version, and isolation (`--brief` is Node and VM only). `chat` is a live session: sticky header (model, context placeholder, `/exit`), conversation until `/exit`. `--tools` is an operator allow rule, not a filter bypass. See [POLICY.md](../architecture/POLICY.md).
+`run --once "hello"` is one chat turn then exit. If the Node service is up it uses that VM path; if you are root and the service is down (legacy smoke) it still runs in-process. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM; `--yes` starts it). `vm start` boots a guest on the idle Node service with no extra prompt. `corvus vm stop` shuts down the guest only (`session_end`, then reap jailer; confirmation; Node stays idle). `corvus stop` does that, then stops the Node systemd unit (confirmation; sudo for `systemctl stop`). `vm status` is the guest only. `status` leads with Node and VM, then this preview, version, and isolation (`--brief` is Node and VM only). `chat` is a live session: sticky header (model, context placeholder, `/exit`), conversation until `/exit`. `--tools` is an operator allow rule, not a filter bypass. See [POLICY.md](../architecture/POLICY.md).
 
-`start` is an alias of `vm start`. `--yes` / `-y` skips the confirmation on `vm stop`, `stop`, and `update`.
+`--yes` / `-y` skips the confirmation on `vm stop`, `stop`, and `update`, and on `start` it starts the VM without asking.
 
 Unit tests do not boot a VM.
 

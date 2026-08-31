@@ -8,10 +8,11 @@ help:
 	@echo "  ./install.sh        Install (password only when needed)"
 	@echo
 	@echo "Then:"
-	@echo "  corvus status       Is Corvus up?"
+	@echo "  corvus status       Is Corvus-Node up?"
+	@echo "  corvus start        Bring Corvus-Node up (asks before the VM; Enter skips)"
 	@echo "  corvus vm start     Start the isolated agent"
 	@echo "  corvus chat         Talk to it; type /exit when done"
-	@echo "  corvus vm stop      End the session; Corvus stays ready"
+	@echo "  corvus vm stop      End the session; Corvus-Node stays ready"
 	@echo "  corvus stop         Shut everything down (asks first)"
 	@echo
 	@echo "Developers — CONTRIBUTING.md"
@@ -21,7 +22,7 @@ help:
 	@echo "  sudo make install   Privileged step (./install.sh does this)"
 	@echo "  make test           Unit tests (no virtual machine)"
 	@echo "  make lint"
-	@echo "  make smoke          Live run against the installed Corvus"
+	@echo "  make smoke          Live run against the installed Corvus-Node"
 	@echo
 	@echo "Ship a version: bump pyproject + __version__ + README, merge main"
 	@echo

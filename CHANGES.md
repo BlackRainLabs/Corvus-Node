@@ -4,6 +4,41 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - product name is Corvus-Node; corvus is the CLI
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`, `src/corvus_node/node/control.py`
+- `packaging/operator-install.sh`, `tests/test_cli.py`, `tests/test_operator_install.py`
+- `README.md`, `Makefile`, `AGENTS.md`, `CONTRIBUTING.md`
+- `docs/planning/OPERATIONS.md`, `.cursor/rules/branding.mdc`, `CHANGES.md`
+
+**Key Changes:**
+- Operator copy and docs call the product **Corvus-Node**. `corvus` is only the CLI command. Never refer to this product as Corvus (a different creator's project). `$HOME/Corvus-Node`, group `corvus`, `corvus-node.service`, and Corvus Hypervisor stay.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - start asks before the VM; Black Rain Labs branding
+
+**Documents Modified:**
+- `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`, `src/corvus_node/node/daemon.py`
+- `tests/test_cli.py`, `tests/test_strip_ai_trailers.py`
+- `packaging/strip-ai-trailers.sh`, `packaging/operator-install.sh`, `packaging/check-prereqs.sh`
+- `.githooks/commit-msg`, `.cursor/rules/branding.mdc`, `.cursor/rules/git-timestamps.mdc`
+- `AGENTS.md`, `CONTRIBUTING.md`, `README.md`, `Makefile`, `SECURITY.md`
+- `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`
+- `docs/architecture/OVERVIEW.md`, `docs/architecture/AGENT-WORKFLOW.md`
+- `guest/README.md`, `CHANGES.md`
+
+**Key Changes:**
+- `corvus start` is no longer an alias of `vm start`. It brings Node up and asks before starting the guest (Enter skips; `--yes` starts the VM). `vm start` still boots the guest with no extra prompt.
+- Commits and docs are **Black Rain Labs - Research & Development Division**. Strip Cursor / AI trailers (`Co-authored-by: Cursor`, Made by, Created by). Human GitHub Contributors are allowed.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - commits and Releases use the wall clock
 
 **Documents Modified:**
