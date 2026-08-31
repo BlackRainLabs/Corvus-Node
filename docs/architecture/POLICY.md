@@ -9,7 +9,7 @@
 
 # Policy — RBAC baked in at the core
 
-v0.1.5. Filter, principal, hop MAC, and default-deny chat live in **Node**. This is not a bolt-on.
+v0.1.6. Filter, principal, hop MAC, and default-deny chat live in **Node**. This is not a bolt-on.
 
 ## Trust model
 

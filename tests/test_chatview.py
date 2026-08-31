@@ -15,7 +15,7 @@ from corvus_node.node.chatview import (
 
 def test_header_names_exit_model_and_empty_context() -> None:
     text = format_header_plain(
-        ChatChrome(version="0.1.5", model="stub", context="", tools="echo", workspace="/tmp/ws")
+        ChatChrome(version="0.1.6", model="stub", context="", tools="echo", workspace="/tmp/ws")
     )
     assert "/exit to leave" in text
     assert "model: stub" in text

@@ -10,22 +10,19 @@
 
 ## First run (operator)
 
-Linux with KVM, Python 3.12+, and a guest disk. Sudo is **once**.
+Linux with KVM. Sudo only when the installer needs it. Group `corvus` is entered for you.
 
 ```bash
-make check
-make guest-assets
-sudo make install
-newgrp corvus
+./install.sh
 corvus status
 corvus vm start
 corvus chat
 corvus stop
 ```
 
-`make check` reports missing packages or `/dev/kvm` before a long bake. `stop` shuts down the guest VM; the Node systemd unit stays up. Operator `vm` / `chat` / `run` do not use sudo. If Node is down, those verbs fail closed.
+`./install.sh` installs missing packages, bakes the guest disk, installs Node under `$HOME/Corvus-Node`, and `exec newgrp corvus` in this terminal so you do not run `newgrp` yourself. Re-runs skip green already-up-to-date steps. `stop` shuts down the guest VM; the Node systemd unit stays up. If Node is down, `vm` / `chat` fail closed.
 
-Full command list and paths are below. Product overview for operators is [README.md](../../README.md).
+Make path (same privileged inner script): `make check`, `make guest-assets`, `sudo make install`. Product overview: [README.md](../../README.md).
 
 ## Dev loop (no VM)
 
@@ -44,16 +41,15 @@ Every version ships a runnable operator CLI. `corvus --help` and `corvus status`
 ## Install (sudo once)
 
 ```bash
-make guest-assets
-sudo make install
-newgrp corvus   # or log out and back in
+./install.sh
+# or: make guest-assets && sudo make install
 corvus status
 corvus vm start
 ```
 
-Install creates group `corvus`, a venv at `/opt/corvus-node/venv`, `/usr/local/bin/corvus`, `/etc/corvus-node/env`, copies guest assets into `/var/lib/corvus-node/assets` when present, and enables systemd `corvus-node.service` (root `serve`). The control socket is `0660` root:corvus. After that the operator CLI does not use sudo. Jailer still runs inside the Node service as root.
+Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus`, not user-writable), `$HOME/Corvus-Node/bin/corvus`, env at `$HOME/Corvus-Node/env`, hashed assets under `$HOME/Corvus-Node/assets`, control socket under `$HOME/Corvus-Node/run`, and systemd `corvus-node.service`. Firecracker **jail** dirs stay `/var/lib/corvus-node` (short vsock paths; `/run` is `nodev`). After `./install.sh` the operator CLI does not use sudo. Jailer still runs inside the Node service as root. The installer enters group `corvus` in that terminal.
 
-`corvus update` refreshes that **installed** prefix from a newer GitHub tag (`pip` into `/opt/corvus-node/venv`). It does not `git pull` this tree. Sudo is only needed if the prefix is not writable (same as reinstall). If you are on a dirty checkout, ahead of `origin/main`, or a version newer than GitHub (typical internal run before a PR merges — local `0.1.5`, GitHub still `0.1.4`), it reports unreleased and does not install. `status` always prints the same check. Tests set `CORVUS_NODE_SKIP_UPDATE_CHECK=1`.
+`corvus update` refreshes that **installed** prefix from a newer GitHub tag (`pip` into `$HOME/Corvus-Node/venv`). It does not `git pull` this tree. Sudo is needed because that venv is root-owned. If you are on a dirty checkout, ahead of `origin/main`, or a version newer than GitHub (typical internal run before a PR merges — local `0.1.6`, GitHub still `0.1.5`), it reports unreleased and does not install. `status` always prints the same check. Tests set `CORVUS_NODE_SKIP_UPDATE_CHECK=1`.
 
 ## Guest assets
 
@@ -65,18 +61,18 @@ Writes a pinned Firecracker **v1.16.1** binary, **jailer**, CI kernel, and Debia
 
 Override paths with `CORVUS_NODE_KERNEL`, `CORVUS_NODE_ROOTFS`, `CORVUS_NODE_FIRECRACKER`, `CORVUS_NODE_JAILER`, and `CORVUS_NODE_CACHE`. Details: `guest/README.md`.
 
-Live KVM smoke boots a jailed microVM **through the installed Node** (no sudo, no spawned `serve`). Node must already be up (`sudo make install`). `make test` stays VM-free.
+Live KVM smoke boots a jailed microVM **through the installed Node** (no sudo, no spawned `serve`). Node must already be up (`./install.sh`). `make test` stays VM-free.
 
 ```bash
 make smoke
 # same as: CORVUS_NODE_SMOKE=1 pytest tests/test_kvm_smoke.py -q
 ```
 
-Skip if the Node service is down, or if a guest VM is already running (`corvus vm stop` first). Isolation assets are the service's (`/etc/corvus-node/env`), not the test process.
+Skip if the Node service is down, or if a guest VM is already running (`corvus vm stop` first). Isolation assets are the service's (`$HOME/Corvus-Node/env`), not the test process.
 
 Jail dirs live under `/var/lib/corvus-node/firecracker/<id>/` (ext4, not `/run` — `/run` is `nodev` and jailer's `/dev/kvm` would fail with EACCES). The host vsock UDS is `{jail_root}/v.sock_4040` and must fit Linux `sockaddr_un` (107 bytes). Jailer `--new-pid-ns` clone()s Firecracker and the parent jailer exits 0; Node waits on `{jail_root}/firecracker.pid`. The vsock UDS, `vm.json`, `fc.log`, and `serial.log` are owned by the jailer uid. Jailer stdio is not the operator TTY (`stdin` is `/dev/null`; guest `ttyS0` is `serial.log`).
 
-The operator control socket is `{runtime}/control.sock` (`0660`, group `corvus`). Default runtime is `/var/lib/corvus-node`. Override with `CORVUS_NODE_RUNTIME_DIR`. PID file `node.pid`, serve log `node.log`.
+The operator control socket is `{runtime}/control.sock` (`0660`, group `corvus`). Default runtime is `$HOME/Corvus-Node/run`. Override with `CORVUS_NODE_RUNTIME_DIR`. PID file `node.pid`, serve log `node.log`.
 
 ## Operator CLI
 
@@ -94,7 +90,7 @@ corvus vm start --workspace /path/to/tree --tools file_read,file_write
 corvus update
 ```
 
-If the Node service is not running, `vm` / `chat` **fail closed** (`sudo make install`). `status` still runs and shows `Node: down`. There is no TCP fallback and no raw Firecracker.
+If the Node service is not running, `vm` / `chat` **fail closed** (`./install.sh`). `status` still runs and shows `Node: down`. There is no TCP fallback and no raw Firecracker.
 
 Default vsock port: `4040`. Guest CID is assigned at launch. `--workspace /path` is a live host directory Node may read and write after RBAC (one path). The guest does not mount that folder. Writes land on the host immediately. A later turn, or your editor, sees the same files.
 

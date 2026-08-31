@@ -15,7 +15,7 @@ CLI_NAME = "corvus"
 
 HELP_BLURB = (
     f"Corvus-Node {__version__} — one agent in a Firecracker VM ({LLM_NAME} LLM).\n"
-    "Install once (sudo make install), then no sudo:\n"
+    "Install once (./install.sh), then no sudo:\n"
     "  corvus vm start   →   corvus chat   →   /exit   →   corvus stop\n"
     "CLI talks only to Node. Node owns jailer, vsock, and RBAC. No TCP product mode."
 )
@@ -23,7 +23,7 @@ HELP_BLURB = (
 HELP_EPILOG = (
     f"This build: {THIS_BUILD}.\n"
     f"Not in this build: {NOT_IN_THIS_BUILD}.\n"
-    "sudo make install once (group + systemd Node). After that, vm/chat/run "
+    "sudo make install once or ./install.sh (group + systemd Node). After that, vm/chat/run "
     "do not use sudo. vm start|stop|status is the Firecracker guest; the Node "
     "service stays up. start/stop are aliases for vm start/stop; stop always "
     "shuts down the guest VM first (Node stays up). "

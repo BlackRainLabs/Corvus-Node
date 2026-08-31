@@ -14,7 +14,7 @@
    - Root `CHANGES.md` (latest changes)
    - `docs/architecture/AGENT-WORKFLOW.md` (guest engine behavior)
    - `docs/planning/OPERATIONS.md` (run, test, Firecracker smoke)
-   - Root `README.md` (operator setup: `make check`, bake, `sudo make install`)
+   - Root `README.md` (operator setup: `./install.sh` into `$HOME/Corvus-Node`)
 
 2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`.
 
@@ -25,9 +25,9 @@
    - Each version ships a working operator CLI. `--help` and `status` describe **this build** (what runs, what is not in this version).
    - A verb that is not implemented fails closed with the version id. Never a fake success.
    - `corvus status` runs without KVM and reports isolation gaps plus a GitHub version check.
-   - `sudo make install` once (`/opt/corvus-node` venv + group + systemd Node). Operator `vm` / `chat` / `run` do not use sudo.
+   - `./install.sh` once (`$HOME/Corvus-Node` venv + group + systemd Node; installer enters group `corvus`). Operator `vm` / `chat` / `run` do not use sudo. `sudo make install` is the inner privileged step.
    - `corvus vm start|stop|status` is the Firecracker guest. `start` / `stop` are aliases. `stop` always shuts down the guest VM; it does not stop the Node service.
-   - `corvus update` is for the installed app vs GitHub tags (`pip` into that prefix). It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.5` while GitHub is still `0.1.4`).
+   - `corvus update` is for the installed app vs GitHub tags (`pip` into `$HOME/Corvus-Node/venv`). It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.6` while GitHub is still `0.1.5`).
 
 5. **Runtime Agent Workflow**:
    - `AGENT-WORKFLOW.md` is binding for guest behavior.
@@ -44,7 +44,7 @@
 
 7. **Isolation**:
    - Production path is Firecracker + vsock. No TCP product mode.
-   - CLI/GUI talk to Node on host AF_UNIX (`0660`, group `corvus`). The Node **service** needs jailer/KVM/root. The operator CLI does not. `vm` / `chat` fail closed if Node is not running (`sudo make install`).
+   - CLI/GUI talk to Node on host AF_UNIX (`0660`, group `corvus`). The Node **service** needs jailer/KVM/root. The operator CLI does not. `vm` / `chat` fail closed if Node is not running (`./install.sh`).
    - Workspace host paths are an allowlist on **Node**. Node reads and writes those files after RBAC. The guest does not mount the host folder.
 
 8. **Do not copy Corvus Hypervisor.** Use it as a principles spec. Do not paste `src/corvus/`, the Operator Console, catalogs, or grants.

@@ -1,11 +1,11 @@
 [Unit]
 Description=Corvus-Node privileged Node daemon
-Documentation=file:///usr/local/share/doc/corvus-node
+Documentation=https://www.BlackRainLabs.com
 After=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=-/etc/corvus-node/env
+EnvironmentFile=-ENV_FILE_PLACEHOLDER
 ExecStart=PYTHON_PLACEHOLDER -m corvus_node serve
 Restart=always
 RestartSec=2
