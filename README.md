@@ -12,15 +12,19 @@ This preview uses a **practice model** (a stub) so you can try the real isolatio
 
 64-bit Linux (Intel/AMD or ARM) with virtualization turned on — most PCs already have this.
 
+**This checkout (developers):** clone the repo and run the installer. It installs *this* tree.
+
 ```bash
 git clone https://github.com/BlackRainLabs/Corvus-Node.git
 cd Corvus-Node
 ./install.sh
 ```
 
+**Installed app (users):** after Corvus is on the machine, `corvus update` installs the GitHub **release wheel** (not a git clone). It asks before replacing what you have. A GitHub Release also ships a small install tarball (scripts + source to run, not tests or architecture docs).
+
 The installer may ask for your password to set up isolation. **Chatting does not use sudo.** The agent never gets your admin account.
 
-Re-run `./install.sh` anytime. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
+Re-run `./install.sh` anytime. From a git clone it uses this checkout; `--release` fetches the GitHub wheel instead. If Corvus is already installed, you can **upgrade** or **keep** the current version. Steps that are already done print green **already up to date**. Add `--yes` if you do not want to press Enter.
 
 ## First run
 
@@ -44,7 +48,7 @@ corvus vm stop             # end the session; Corvus stays ready
 | `corvus stop` | End the session **and** shut Corvus down (asks first) |
 | `corvus vm status` | Agent session only |
 | `corvus run --once "hello"` | One reply, then done |
-| `corvus update` | Install a newer release (stops Corvus first if it is running) |
+| `corvus update` | Install a newer GitHub release (asks before replacing; stops Corvus first if it is running) |
 
 Optional: `--tools echo` lets the agent echo text back. `--workspace /path --tools file_read` lets it read files in that folder only — nowhere else. `corvus settings` remembers those choices. A running session does not pick up new rules; `vm stop` then `vm start`. Add `--yes` to skip the “are you sure?” prompt on stop or update.
 

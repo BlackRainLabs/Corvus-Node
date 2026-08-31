@@ -4,6 +4,24 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - local git vs GitHub release; upgrade or keep
+
+**Documents Modified:**
+- `packaging/operator-install.sh`, `packaging/install.sh`
+- `src/corvus_node/node/update.py`, `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`
+- `.github/workflows/release.yml`
+- `tests/test_update.py`, `tests/test_cli.py`, `tests/test_operator_install.py`
+- `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`, `CHANGES.md`
+
+**Key Changes:**
+- `./install.sh` from a git checkout (or an unpacked snapshot) installs **this tree**. `--release` (or no local source) fetches the GitHub **release wheel**. If Corvus is already installed, the installer asks to **upgrade** or **keep** the current version before stopping Node.
+- `corvus update` pip-installs that wheel (not `git+https`), asks the same upgrade-or-keep question, then bounces Node if it is up. A `v*` tag builds the wheel and a slim install tarball (no tests/docs) onto a GitHub Release.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - status does not call empty GitHub tags “unreachable”
 
 **Documents Modified:**
