@@ -41,11 +41,30 @@ def test_local_unreleased_when_newer_than_github() -> None:
 def test_check_version_unreleased_does_not_offer_update() -> None:
     status = check_version()
     assert status.update_available is False
-    assert (
-        "GitHub" in status.reason
-        or "unreleased" in status.reason
-        or "not on GitHub" in status.reason
+    assert status.github is None
+    reason = status.reason.lower()
+    assert any(
+        needle in reason
+        for needle in (
+            "github",
+            "unreleased",
+            "not on github",
+            "skipped",
+            "no github tags",
+        )
     )
+
+
+def test_check_version_skip_env_on_clean_source_does_not_offer_update(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI: CORVUS_NODE_SKIP_UPDATE_CHECK=1 and a clean checkout."""
+    monkeypatch.setattr("corvus_node.node.update.local_unreleased", lambda _g: False)
+    monkeypatch.setattr("corvus_node.node.update.is_source_checkout", lambda: True)
+    status = check_version()
+    assert status.update_available is False
+    assert status.github is None
+    assert status.reason == "version check skipped"
 
 
 def test_fetch_github_picks_latest_tag(

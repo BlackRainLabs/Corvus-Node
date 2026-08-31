@@ -11,7 +11,7 @@
 - `docs/planning/OPERATIONS.md`, `CHANGES.md`
 
 **Key Changes:**
-- `corvus status` talks to GitHub’s tags API. This repo has no tags yet, so the check used to print **GitHub unreachable**. It now says **no GitHub tags yet** when the API answers with an empty list. Skip vs network failure stay distinct.
+- `corvus status` talks to GitHub’s tags API. This repo has no tags yet, so the check used to print **GitHub unreachable**. It now says **no GitHub tags yet** when the API answers with an empty list. Skip vs network failure stay distinct. Tests accept **version check skipped** when `CORVUS_NODE_SKIP_UPDATE_CHECK=1` (CI is a clean checkout).
 
 **Reviewed By:** Black Rain Labs - R&D
 
