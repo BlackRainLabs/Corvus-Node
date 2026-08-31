@@ -270,6 +270,7 @@ populate_debian_tree() {
     # into sources.list and apt rejects a malformed [option].
     TMPDIR="$(mmdebstrap_tmpdir)" mmdebstrap --variant=minbase --include=python3 \
       --keyring="$keyring" \
+      --setup-hook='mkdir -p "$1/etc/apt/trusted.gpg.d"' \
       --setup-hook="copy-in ${keyring} /etc/apt/trusted.gpg.d" \
       --format=tar bookworm "$tarout" http://deb.debian.org/debian
     tar -C "$tree" --exclude=./dev --exclude=./proc --exclude=./sys -xf "$tarout"
