@@ -19,7 +19,7 @@ CONTROL_SOCK_NAME = "control.sock"
 PID_NAME = "node.pid"
 LOG_NAME = "node.log"
 CONTROL_GROUP = "corvus"
-INSTALL_HINT = "Corvus is not running; ./install.sh"
+INSTALL_HINT = "Corvus-Node is not running; ./install.sh"
 
 
 def product_prefix() -> Path:

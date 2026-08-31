@@ -32,6 +32,7 @@ from corvus_node.node.daemon import (
     serve_forever,
     start_daemon,
     wait_node_gone,
+    wait_node_ready,
 )
 from corvus_node.node.info import (
     CLI_NAME,
@@ -75,25 +76,29 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("help", help="show this help")
     sub.add_parser("version", help="print version")
-    status_p = sub.add_parser("status", help="is Corvus up? is an agent session running?")
+    status_p = sub.add_parser("status", help="is Corvus-Node up? is an agent session running?")
     status_p.add_argument(
         "--brief",
         action="store_true",
         help="Node and VM only (no preview, version, or isolation)",
     )
-    start_p = sub.add_parser("start", help="start the isolated agent (same as: vm start)")
+    start_p = sub.add_parser(
+        "start",
+        help="start Corvus-Node; asks before starting the isolated agent (Enter = no)",
+    )
     _launch_flags(start_p)
+    _yes_flag(start_p, help_text="also start the isolated agent (do not ask)")
     sub.add_parser("chat", help="talk to the agent until /exit")
-    stop_p = sub.add_parser("stop", help="end the session and shut Corvus down")
+    stop_p = sub.add_parser("stop", help="end the session and shut Corvus-Node down")
     _yes_flag(stop_p)
     vm_p = sub.add_parser("vm", help="the isolated agent session")
     vm_sub = vm_p.add_subparsers(dest="vm_cmd", required=False)
     vm_start = vm_sub.add_parser("start", help="start the isolated agent")
     _launch_flags(vm_start)
-    vm_stop = vm_sub.add_parser("stop", help="end the agent session; Corvus stays ready")
+    vm_stop = vm_sub.add_parser("stop", help="end the agent session; Corvus-Node stays ready")
     _yes_flag(vm_stop)
     vm_sub.add_parser("status", help="agent session only")
-    update_p = sub.add_parser("update", help="install a newer Corvus release")
+    update_p = sub.add_parser("update", help="install a newer Corvus-Node release")
     _yes_flag(update_p)
     settings_p = sub.add_parser("settings", help="remember tools and folder for next start")
     settings_sub = settings_p.add_subparsers(dest="settings_cmd")
@@ -137,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
     if args.command == "start":
-        return _start(merged)
+        return _product_start(merged, yes=bool(getattr(args, "yes", False)))
     if args.command == "serve":
         return _serve(merged)
     if args.command == "run":
@@ -149,12 +154,16 @@ def main(argv: list[str] | None = None) -> int:
     return 2
 
 
-def _yes_flag(parser: argparse.ArgumentParser) -> None:
+def _yes_flag(
+    parser: argparse.ArgumentParser,
+    *,
+    help_text: str = "skip the confirmation prompt",
+) -> None:
     parser.add_argument(
         "--yes",
         "-y",
         action="store_true",
-        help="skip the confirmation prompt",
+        help=help_text,
     )
 
 
@@ -344,6 +353,46 @@ def _start(merged: LaunchSettings) -> int:
     return 0
 
 
+def _runtime_is_product_install() -> bool:
+    return runtime_dir().resolve() == (product_prefix() / "run").resolve()
+
+
+def _ensure_node_up() -> int:
+    """Bring the Node service up. Does not start the guest VM."""
+    if node_pid() is not None:
+        return 0
+    if not _runtime_is_product_install():
+        print(f"corvus: {INSTALL_HINT}", file=sys.stderr)
+        return 2
+    start_rc = _start_systemd_unit()
+    if start_rc != 0:
+        print(f"corvus: Corvus-Node did not start ({INSTALL_HINT})", file=sys.stderr)
+        return 2
+    if not wait_node_ready():
+        print(f"corvus: Corvus-Node did not become ready ({INSTALL_HINT})", file=sys.stderr)
+        return 2
+    print("corvus: Corvus-Node started", file=sys.stderr)
+    return 0
+
+
+def _product_start(merged: LaunchSettings, *, yes: bool) -> int:
+    node_rc = _ensure_node_up()
+    if node_rc != 0:
+        return node_rc
+    pid = node_pid()
+    if _vm_is_running(pid):
+        print("corvus: agent already running", file=sys.stderr)
+        return 0
+    if not _confirm(
+        "Start the isolated agent (VM) as well?",
+        yes=yes,
+        missing_tty="corvus: not starting the VM (pass --yes to start it)",
+    ):
+        print("corvus: Corvus-Node is ready; agent not running (corvus vm start)", file=sys.stderr)
+        return 0
+    return _start(merged)
+
+
 def _serve(merged: LaunchSettings) -> int:
     try:
         require_root()
@@ -438,11 +487,14 @@ def _vm_is_running(pid: int | None) -> bool:
         return False
 
 
-def _confirm(prompt: str, *, yes: bool) -> bool:
+def _confirm(prompt: str, *, yes: bool, missing_tty: str | None = None) -> bool:
     if yes:
         return True
     if not sys.stdin.isatty():
-        print("corvus: not a TTY; pass --yes to confirm", file=sys.stderr)
+        print(
+            missing_tty or "corvus: not a TTY; pass --yes to confirm",
+            file=sys.stderr,
+        )
         return False
     print(f"{prompt} [y/N] ", end="", file=sys.stderr, flush=True)
     try:
@@ -458,24 +510,24 @@ def _print_vm_stop_explain(*, running: bool) -> None:
         print("The isolated agent will shut down.", file=sys.stderr)
     else:
         print("There is no agent session running.", file=sys.stderr)
-    print("Corvus stays ready in the background.", file=sys.stderr)
+    print("Corvus-Node stays ready in the background.", file=sys.stderr)
     print("You can corvus vm start again without reinstalling.", file=sys.stderr)
     print("Chat, if open, will disconnect.", file=sys.stderr)
     print(
-        "This does not shut Corvus down. Use corvus stop for that.",
+        "This does not shut Corvus-Node down. Use corvus stop for that.",
         file=sys.stderr,
     )
 
 
 def _print_product_stop_explain(*, vm_up: bool, systemd: bool) -> None:
-    print("corvus stop — shut Corvus down", file=sys.stderr)
+    print("corvus stop — shut Corvus-Node down", file=sys.stderr)
     print(
         "  1. The isolated agent" + (" will shut down." if vm_up else " is already stopped."),
         file=sys.stderr,
     )
     if systemd:
         print(
-            "  2. Corvus in the background will stop.",
+            "  2. Corvus-Node in the background will stop.",
             file=sys.stderr,
         )
         print(
@@ -490,8 +542,11 @@ def _print_product_stop_explain(*, vm_up: bool, systemd: bool) -> None:
         )
         print("You are not giving the agent an admin account.", file=sys.stderr)
     else:
-        print("  2. Corvus in the background will stop.", file=sys.stderr)
-    print("To end only the agent session and leave Corvus ready: corvus vm stop", file=sys.stderr)
+        print("  2. Corvus-Node in the background will stop.", file=sys.stderr)
+    print(
+        "To end only the agent session and leave Corvus-Node ready: corvus vm stop",
+        file=sys.stderr,
+    )
 
 
 def _systemd_main_pid() -> int | None:
@@ -524,20 +579,20 @@ def _uses_this_systemd_unit(node: int | None) -> bool:
 
 
 def _print_replace_stop_explain(*, why: str, vm_up: bool, systemd: bool) -> None:
-    print(f"corvus {why} — Corvus is already running", file=sys.stderr)
+    print(f"corvus {why} — Corvus-Node is already running", file=sys.stderr)
     print(
         "  1. The isolated agent" + (" will shut down." if vm_up else " is already stopped."),
         file=sys.stderr,
     )
-    if systemd:
-        print("  2. Corvus in the background will stop so files can be replaced.", file=sys.stderr)
-    else:
-        print("  2. Corvus in the background will stop so files can be replaced.", file=sys.stderr)
+    print(
+        "  2. Corvus-Node in the background will stop so files can be replaced.",
+        file=sys.stderr,
+    )
     if why == "update":
         print("  3. The newer release is installed.", file=sys.stderr)
-        print("  4. Corvus starts again.", file=sys.stderr)
+        print("  4. Corvus-Node starts again.", file=sys.stderr)
     else:
-        print("  3. Install continues, then Corvus starts again.", file=sys.stderr)
+        print("  3. Install continues, then Corvus-Node starts again.", file=sys.stderr)
     print("A password may be asked because isolation is a system job.", file=sys.stderr)
 
 
@@ -546,7 +601,7 @@ def _stop_systemd_unit() -> int:
     if os.geteuid() != 0:
         cmd = ["sudo", *cmd]
     print(
-        "corvus: stopping Corvus (password: isolation is a system job)",
+        "corvus: stopping Corvus-Node (password: isolation is a system job)",
         file=sys.stderr,
     )
     try:
@@ -560,7 +615,7 @@ def _start_systemd_unit() -> int:
     if os.geteuid() != 0:
         cmd = ["sudo", *cmd]
     print(
-        "corvus: starting Corvus (password: isolation is a system job)",
+        "corvus: starting Corvus-Node (password: isolation is a system job)",
         file=sys.stderr,
     )
     try:
@@ -581,7 +636,7 @@ def _execute_product_stop() -> int:
     pid = node_pid()
     systemd = _uses_this_systemd_unit(pid)
     if pid is None and not systemd:
-        print("corvus: Corvus is already stopped", file=sys.stderr)
+        print("corvus: Corvus-Node is already stopped", file=sys.stderr)
         return 0
     if pid is not None:
         try:
@@ -593,12 +648,13 @@ def _execute_product_stop() -> int:
         rc = _stop_systemd_unit()
         if rc != 0:
             print(
-                "corvus: Corvus did not stop; it may still be up (sudo systemctl stop corvus-node)",
+                "corvus: Corvus-Node did not stop; it may still be up "
+                "(sudo systemctl stop corvus-node)",
                 file=sys.stderr,
             )
             return 2
         wait_node_gone()
-        print("corvus: Corvus stopped", file=sys.stderr)
+        print("corvus: Corvus-Node stopped", file=sys.stderr)
         return 0
     if node_pid() is not None:
         try:
@@ -606,7 +662,7 @@ def _execute_product_stop() -> int:
         except ControlError as exc:
             print(f"corvus: {exc}", file=sys.stderr)
             return 2
-    print("corvus: Corvus stopped", file=sys.stderr)
+    print("corvus: Corvus-Node stopped", file=sys.stderr)
     return 0
 
 
@@ -617,7 +673,7 @@ def _vm_stop(*, yes: bool) -> int:
         return 2
     running = _vm_is_running(pid)
     _print_vm_stop_explain(running=running)
-    if not _confirm("End the agent session? Corvus will stay ready.", yes=yes):
+    if not _confirm("End the agent session? Corvus-Node will stay ready.", yes=yes):
         print("corvus: cancelled", file=sys.stderr)
         return 2
     try:
@@ -626,9 +682,9 @@ def _vm_stop(*, yes: bool) -> int:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
     if running:
-        print("corvus: agent session ended; Corvus stays ready", file=sys.stderr)
+        print("corvus: agent session ended; Corvus-Node stays ready", file=sys.stderr)
     else:
-        print("corvus: no agent session was running; Corvus stays ready", file=sys.stderr)
+        print("corvus: no agent session was running; Corvus-Node stays ready", file=sys.stderr)
     return 0
 
 
@@ -636,16 +692,16 @@ def _product_stop(*, yes: bool) -> int:
     pid = node_pid()
     systemd = _uses_this_systemd_unit(pid)
     if pid is None and not systemd:
-        print("corvus: Corvus is already stopped", file=sys.stderr)
+        print("corvus: Corvus-Node is already stopped", file=sys.stderr)
         return 0
     _print_product_stop_explain(vm_up=_vm_is_running(pid), systemd=systemd)
-    if not _confirm("Shut down the agent and Corvus?", yes=yes):
+    if not _confirm("Shut down the agent and Corvus-Node?", yes=yes):
         print("corvus: cancelled", file=sys.stderr)
         return 2
     rc = _execute_product_stop()
     if rc == 0 and systemd:
         print(
-            "corvus: start again with ./install.sh (or sudo systemctl start corvus-node)",
+            "corvus: start again with corvus start (or sudo systemctl start corvus-node)",
             file=sys.stderr,
         )
     return rc
@@ -659,12 +715,12 @@ def _stop_running_for_replace(*, yes: bool, why: str) -> tuple[int, bool]:
         return 0, False
     _print_replace_stop_explain(why=why, vm_up=_vm_is_running(pid), systemd=systemd)
     prompt = (
-        "Stop Corvus, then continue the update?"
+        "Stop Corvus-Node, then continue the update?"
         if why == "update"
-        else "Stop Corvus, then continue install?"
+        else "Stop Corvus-Node, then continue install?"
     )
     if not _confirm(prompt, yes=yes):
-        print("corvus: cancelled; Corvus is still running", file=sys.stderr)
+        print("corvus: cancelled; Corvus-Node is still running", file=sys.stderr)
         return 2, False
     rc = _execute_product_stop()
     return rc, systemd and rc == 0
@@ -696,7 +752,7 @@ def _update(*, yes: bool) -> int:
         )
         if restart:
             print(
-                "corvus: Corvus is down; ./install.sh (or sudo systemctl start corvus-node)",
+                "corvus: Corvus-Node is down; ./install.sh (or sudo systemctl start corvus-node)",
                 file=sys.stderr,
             )
         return pip_rc
@@ -704,11 +760,11 @@ def _update(*, yes: bool) -> int:
         start_rc = _start_systemd_unit()
         if start_rc != 0:
             print(
-                "corvus: updated, but Corvus did not start (./install.sh)",
+                "corvus: updated, but Corvus-Node did not start (./install.sh)",
                 file=sys.stderr,
             )
             return start_rc
-        print("corvus: updated; Corvus started", file=sys.stderr)
+        print("corvus: updated; Corvus-Node started", file=sys.stderr)
         return 0
     print("corvus: updated", file=sys.stderr)
     return 0

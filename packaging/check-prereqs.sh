@@ -114,5 +114,5 @@ fi
 echo "Ready for:"
 echo "  ./install.sh          # guided install into \$HOME/Corvus-Node"
 echo "  or: make guest-assets && sudo make install"
-echo "  corvus status && corvus vm start && corvus chat"
+echo "  corvus status && corvus start && corvus vm start && corvus chat"
 exit 0

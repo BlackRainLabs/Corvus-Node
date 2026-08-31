@@ -16,6 +16,7 @@ CLI_NAME = "corvus"
 HELP_BLURB = (
     f"Corvus-Node {__version__} — a private AI agent on your Linux PC ({LLM_NAME} model).\n"
     "Install once (./install.sh), then:\n"
+    "  corvus start        bring Corvus-Node up (asks before the VM; Enter skips)\n"
     "  corvus vm start   →   corvus chat   →   /exit   →   corvus vm stop\n"
     "  corvus stop         shut everything down (asks first)\n"
     "The agent stays isolated. You do not sudo to chat."
@@ -24,11 +25,12 @@ HELP_BLURB = (
 HELP_EPILOG = (
     f"This preview: {THIS_BUILD}.\n"
     f"Not yet: {NOT_IN_THIS_BUILD}.\n"
-    "vm start / chat / vm stop talk to the isolated agent. Corvus stays ready "
-    "in the background after vm stop. corvus stop shuts the agent and Corvus down "
-    "(asks first). chat lasts until /exit. "
+    "corvus start brings Corvus-Node up and asks before starting the isolated agent "
+    "(Enter skips the VM). vm start / chat / vm stop talk to the agent. "
+    "Corvus-Node stays ready in the background after vm stop. corvus stop shuts the "
+    "agent and Corvus-Node down (asks first). chat lasts until /exit. "
     "corvus update installs a newer GitHub release "
-    "(stops Corvus first if it is running; asks before replacing)."
+    "(stops Corvus-Node first if it is running; asks before replacing)."
 )
 
 

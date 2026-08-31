@@ -64,6 +64,10 @@ def test_start_fails_closed_without_node(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        "corvus_node.cli._start_systemd_unit",
+        lambda: (_ for _ in ()).throw(AssertionError("must not sudo systemctl")),
+    )
     code = main(["start"])
     assert code == 2
     assert "install.sh" in capsys.readouterr().err
@@ -119,6 +123,8 @@ def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Not yet" in out
     assert "live AI model" in out
     assert "vm start" in out
+    assert "asks before" in out or "Enter skips" in out
+    assert "bring Corvus up" not in out
     assert main(["version"]) == 0
     assert capsys.readouterr().out.strip() == __version__
 
@@ -265,19 +271,72 @@ def test_status_brief_is_node_and_vm_only(
     assert "Isolation:" not in out
 
 
+class _TtyStdin(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
 def test_vm_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["vm", "start"]) == 0
     assert "started" in capsys.readouterr().err
 
 
-def test_start_via_control_socket(fake_node: object, capsys: pytest.CaptureFixture[str]) -> None:
+def test_start_does_not_boot_vm_by_default(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("corvus_node.cli._vm_is_running", lambda *_a, **_k: False)
+    monkeypatch.setattr(
+        "corvus_node.cli.rpc_start",
+        lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError("corvus start must not boot the VM")
+        ),
+    )
+    assert main(["start"]) == 0
+    err = capsys.readouterr().err
+    assert "agent not running" in err
+    assert "vm start" in err
+    assert "not starting the VM" in err
+
+
+def test_start_enter_skips_vm(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("corvus_node.cli._vm_is_running", lambda *_a, **_k: False)
+    monkeypatch.setattr(
+        "corvus_node.cli.rpc_start",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("Enter must not boot the VM")),
+    )
+    monkeypatch.setattr(sys, "stdin", _TtyStdin("\n"))
+    assert main(["start"]) == 0
+    assert "agent not running" in capsys.readouterr().err
+
+
+def test_start_yes_boots_vm(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("corvus_node.cli._vm_is_running", lambda *_a, **_k: False)
+    assert main(["start", "--yes"]) == 0
+    assert "started" in capsys.readouterr().err
+
+
+def test_start_y_on_tty_boots_vm(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("corvus_node.cli._vm_is_running", lambda *_a, **_k: False)
+    monkeypatch.setattr(sys, "stdin", _TtyStdin("y\n"))
     assert main(["start"]) == 0
     assert "started" in capsys.readouterr().err
 
 
-class _TtyStdin(io.StringIO):
-    def isatty(self) -> bool:
-        return True
+def test_start_when_vm_already_running(
+    fake_node: object, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "corvus_node.cli.rpc_start",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("already running")),
+    )
+    assert main(["start"]) == 0
+    assert "already running" in capsys.readouterr().err
 
 
 def test_vm_stop_shuts_down_guest_only(
@@ -291,7 +350,7 @@ def test_vm_stop_shuts_down_guest_only(
     err = capsys.readouterr().err
     assert "agent session only" in err
     assert "agent session ended" in err
-    assert "Corvus stays ready" in err
+    assert "Corvus-Node stays ready" in err
 
 
 def test_vm_stop_cancelled(
@@ -314,9 +373,9 @@ def test_stop_shuts_down_guest_and_node(
 ) -> None:
     assert main(["stop", "--yes"]) == 0
     err = capsys.readouterr().err
-    assert "shut Corvus down" in err
+    assert "shut Corvus-Node down" in err
     assert "agent session ended" in err
-    assert "Corvus stopped" in err
+    assert "Corvus-Node stopped" in err
 
 
 def test_stop_cancelled(
@@ -333,7 +392,7 @@ def test_stop_accepted_on_tty(
     monkeypatch.setattr(sys, "stdin", _TtyStdin("yes\n"))
     assert main(["stop"]) == 0
     err = capsys.readouterr().err
-    assert "Corvus stopped" in err
+    assert "Corvus-Node stopped" in err
 
 
 def test_stop_does_not_stop_host_systemd(
@@ -412,6 +471,6 @@ def test_update_yes_stops_live_node_then_pips(
     assert pip_refs
     err = capsys.readouterr().err
     assert "already running" in err
-    assert "Corvus stopped" in err
+    assert "Corvus-Node stopped" in err
     assert "installing" in err
     assert "updated" in err
