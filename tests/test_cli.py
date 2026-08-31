@@ -124,6 +124,8 @@ def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert "live AI model" in out
     assert "vm start" in out
     assert "asks before" in out or "Enter skips" in out
+    assert "corvus gui" in out or "splash" in out
+    assert "CLI and GUI" in out
     assert "bring Corvus up" not in out
     assert main(["version"]) == 0
     assert capsys.readouterr().out.strip() == __version__
@@ -148,6 +150,7 @@ def test_status_without_node(
     assert "Node: down" in out
     assert "VM: (none)" in out
     assert "This preview:" in out
+    assert "splash" in out.lower() or "GUI" in out
     assert "Not yet:" in out
     assert "Version:" in out
     assert "Isolation:" in out
@@ -435,6 +438,7 @@ def test_update_pips_when_github_newer_on_install(
     assert "releases/download" in pip_refs[0]
     err = capsys.readouterr().err
     assert "installing" in err
+    assert "CLI and GUI" in err
     assert "updated" in err
 
 
@@ -473,4 +477,5 @@ def test_update_yes_stops_live_node_then_pips(
     assert "already running" in err
     assert "Corvus-Node stopped" in err
     assert "installing" in err
+    assert "CLI and GUI" in err
     assert "updated" in err

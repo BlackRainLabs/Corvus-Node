@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "corvus-node"
-version = "0.1.6"
+version = "0.1.7"
 description = "Corvus-Node — host Node, four engines in Firecracker, vsock only"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,6 +12,7 @@ license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "Black Rain Labs" }]
 dependencies = [
     "pydantic>=2.9.0",
+    "PySide6",
 ]
 
 [project.optional-dependencies]
@@ -28,11 +29,14 @@ corvus-node = "corvus_node.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/corvus_node"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"gui/corvus_gui" = "corvus_gui"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = ["src", "."]
+pythonpath = ["src", "gui", "."]
 
 [tool.ruff]
 line-length = 100

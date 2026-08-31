@@ -77,7 +77,7 @@ Users: unpack corvus-node-install.tar.gz from the GitHub Release, then
 this checkout. --release always fetches the latest GitHub wheel.
 If Corvus-Node is already installed, you can upgrade or keep the current
 version. Your password is only for setting up isolation. Chat is not root.
-The agent never gets an admin shell. After install, corvus just
+The installer also installs the GUI runtime (PySide/Qt). After install, corvus just
 works in this terminal — you do not type extra group commands.
 EOF
 }
@@ -104,8 +104,9 @@ ${C_BOLD}Why this script asks for your password${C_RST}
   unless you allow them.
 
   Files land under ${C_BOLD}\$HOME/Corvus-Node${C_RST}. This run may install missing
-  packages, build the agent environment, start Corvus-Node in the background,
-  and make the ${C_BOLD}corvus${C_RST} command work in this terminal.
+  packages (including GUI libraries for ${C_BOLD}corvus gui${C_RST}), build the agent
+  environment, start Corvus-Node in the background, and make the ${C_BOLD}corvus${C_RST}
+  command work in this terminal.
 
 EOF
 }
@@ -186,6 +187,66 @@ pkg_names() {
   esac
 }
 
+# Host .so names PySide6 wheels need on Linux. Values are apt / dnf package names.
+qt_host_specs() {
+  local kind
+  kind="$(pkg_kind)"
+  case "$kind" in
+    apt)
+      cat <<'EOF'
+libGL.so.1 libgl1
+libEGL.so.1 libegl1
+libxkbcommon.so.0 libxkbcommon0
+libxkbcommon-x11.so.0 libxkbcommon-x11-0
+libxcb-cursor.so.0 libxcb-cursor0
+libxcb-icccm.so.4 libxcb-icccm4
+libxcb-keysyms.so.1 libxcb-keysyms1
+libfontconfig.so.1 libfontconfig1
+libglib-2.0.so.0 libglib2.0-0
+libdbus-1.so.3 libdbus-1-3
+EOF
+      ;;
+    dnf)
+      cat <<'EOF'
+libGL.so.1 mesa-libGL
+libEGL.so.1 mesa-libEGL
+libxkbcommon.so.0 libxkbcommon
+libxkbcommon-x11.so.0 libxkbcommon-x11
+libxcb-cursor.so.0 xcb-util-cursor
+libxcb-icccm.so.4 xcb-util-wm
+libxcb-keysyms.so.1 xcb-util-keysyms
+libfontconfig.so.1 fontconfig
+libglib-2.0.so.0 glib2
+libdbus-1.so.3 dbus-libs
+EOF
+      ;;
+  esac
+}
+
+so_present() {
+  local so="$1"
+  if command -v ldconfig >/dev/null 2>&1; then
+    ldconfig -p 2>/dev/null | grep -F -q "$so"
+    return $?
+  fi
+  return 1
+}
+
+host_pkg_present() {
+  local pkg="$1"
+  case "$(pkg_kind)" in
+    apt)
+      dpkg-query -W -f '${Status}\n' "$pkg" 2>/dev/null | grep -q "install ok installed"
+      ;;
+    dnf)
+      rpm -q "$pkg" >/dev/null 2>&1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 bin_for_pkg() {
   case "$1" in
     python3 | python3-venv | python3-pip) echo python3 ;;
@@ -235,6 +296,14 @@ missing_pkgs() {
     fi
     echo "$pkg"
   done
+  local so pkg
+  while read -r so pkg; do
+    [[ -z "${so:-}" || -z "${pkg:-}" ]] && continue
+    if so_present "$so" || host_pkg_present "$pkg"; then
+      continue
+    fi
+    echo "$pkg"
+  done < <(qt_host_specs)
 }
 
 prefix_path() {
@@ -811,6 +880,7 @@ cat <<EOF
   ${C_BOLD}corvus start${C_RST}      ${C_DIM}# bring Corvus-Node up; asks before the VM (Enter skips)${C_RST}
   ${C_BOLD}corvus vm start${C_RST}   ${C_DIM}# start the isolated agent${C_RST}
   ${C_BOLD}corvus chat${C_RST}       ${C_DIM}# talk to it; type /exit when done${C_RST}
+  ${C_BOLD}corvus gui${C_RST}        ${C_DIM}# splash (this preview)${C_RST}
   ${C_BOLD}corvus vm stop${C_RST}    ${C_DIM}# end the session; Corvus-Node stays ready${C_RST}
   ${C_BOLD}corvus stop${C_RST}       ${C_DIM}# shut everything down (asks first)${C_RST}
 

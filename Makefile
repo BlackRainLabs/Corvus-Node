@@ -12,6 +12,7 @@ help:
 	@echo "  corvus start        Bring Corvus-Node up (asks before the VM; Enter skips)"
 	@echo "  corvus vm start     Start the isolated agent"
 	@echo "  corvus chat         Talk to it; type /exit when done"
+	@echo "  corvus gui          Splash (this preview)"
 	@echo "  corvus vm stop      End the session; Corvus-Node stays ready"
 	@echo "  corvus stop         Shut everything down (asks first)"
 	@echo
@@ -38,8 +39,8 @@ test: git-dates
 	pytest -q
 
 lint: git-dates
-	ruff check src tests guest
-	ruff format --check src tests guest
+	ruff check src tests guest gui
+	ruff format --check src tests guest gui
 
 guest-assets:
 	bash guest/bake.sh

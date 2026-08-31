@@ -89,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     _launch_flags(start_p)
     _yes_flag(start_p, help_text="also start the isolated agent (do not ask)")
     sub.add_parser("chat", help="talk to the agent until /exit")
+    sub.add_parser("gui", help="show the Corvus-Node splash (this preview)")
     stop_p = sub.add_parser("stop", help="end the session and shut Corvus-Node down")
     _yes_flag(stop_p)
     vm_p = sub.add_parser("vm", help="the isolated agent session")
@@ -98,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     vm_stop = vm_sub.add_parser("stop", help="end the agent session; Corvus-Node stays ready")
     _yes_flag(vm_stop)
     vm_sub.add_parser("status", help="agent session only")
-    update_p = sub.add_parser("update", help="install a newer Corvus-Node release")
+    update_p = sub.add_parser("update", help="install a newer Corvus-Node release (CLI and GUI)")
     _yes_flag(update_p)
     settings_p = sub.add_parser("settings", help="remember tools and folder for next start")
     settings_sub = settings_p.add_subparsers(dest="settings_cmd")
@@ -130,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
         return _settings(args)
     if args.command == "chat":
         return _run_chat()
+    if args.command == "gui":
+        return _gui()
     if args.command == "stop":
         return _product_stop(yes=bool(getattr(args, "yes", False)))
     if args.command == "vm":
@@ -478,6 +481,24 @@ def _run_chat() -> int:
         client.close()
 
 
+def _gui() -> int:
+    """Splash only. Checks PySide/Qt; does not talk to Node."""
+    try:
+        from corvus_gui.deps import gui_missing_reason
+        from corvus_gui.splash import run_splash
+    except ImportError:
+        print(
+            f"corvus: v{__version__} GUI runtime is missing; ./install.sh or corvus update",
+            file=sys.stderr,
+        )
+        return 2
+    reason = gui_missing_reason()
+    if reason:
+        print(f"corvus: {reason}", file=sys.stderr)
+        return 2
+    return run_splash()
+
+
 def _vm_is_running(pid: int | None) -> bool:
     if pid is None:
         return False
@@ -743,7 +764,10 @@ def _update(*, yes: bool) -> int:
     if stop_rc != 0:
         return stop_rc
     ref = github_install_ref(status.github)
-    print(f"corvus: installing GitHub release wheel {ref}", file=sys.stderr)
+    print(
+        f"corvus: installing GitHub release wheel {ref} (CLI and GUI)",
+        file=sys.stderr,
+    )
     pip_rc = _pip_upgrade(ref)
     if pip_rc != 0:
         print(

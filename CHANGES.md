@@ -4,6 +4,43 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-31] - splash duration; Releases stay one version, one wheel
+
+**Documents Modified:**
+- `gui/corvus_gui/splash.py`, `tests/test_gui.py`
+- `src/corvus_node/node/update.py`, `src/corvus_node/cli.py`, `tests/test_update.py`
+- `.github/workflows/release.yml`, `.github/workflows/test.yml`
+- `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `README.md`, `docs/planning/OPERATIONS.md`, `docs/planning/ROADMAP.md`, `CHANGES.md`
+
+**Key Changes:**
+- `corvus gui` splash is animated (fade, chrome pulse, scan) and lasts about 8 seconds (`CORVUS_NODE_GUI_MS` still overrides for tests).
+- GitHub Releases are immutable: one version string, one wheel. Merge PRs at the current version. Bump (`0.1.8`, …) only when operators should get a new Release. `corvus update` and `./install.sh --release` compare version numbers. Contributors use `./install.sh` from the clone for unreleased `main`.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-31] - v0.1.7 splash GUI; installer ships PySide/Qt
+
+**Documents Modified:**
+- `pyproject.toml`, `src/corvus_node/__init__.py`, `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`
+- `gui/corvus_gui/`, `gui/REQUESTS.md`, `gui/README.md`, `docs/gui/AVAILABLE.md`
+- `.github/workflows/release.yml`, `packaging/operator-install.sh`, `Makefile`
+- `.cursor/rules/gui-team.mdc`, `.cursor/rules/core-no-qt.mdc`, `CODEOWNERS`
+- `tests/test_gui.py`, `tests/test_cli.py`, `tests/test_operator_install.py`
+- `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- `docs/architecture/OVERVIEW.md`, `docs/architecture/POLICY.md`
+- `docs/planning/ROADMAP.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Version **0.1.7**. `corvus gui` shows a local PySide6 splash (no Node). Fail-closes if PySide/Qt is missing. `./install.sh` installs PySide6 (required wheel dependency) and host xcb/EGL libs. `corvus update` upgrades the same wheel (CLI and GUI).
+- Releases ship `gui/corvus_gui/` only. GUI workflow files (`REQUESTS.md`, AVAILABLE.md, Cursor rules) stay in git.
+- GUI team owns `gui/`; core owns Node and `docs/gui/AVAILABLE.md`.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-31] - product name is Corvus-Node; corvus is the CLI
 
 **Documents Modified:**

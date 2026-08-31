@@ -1,0 +1,12 @@
+---
+description: Core — no Qt in Node; update AVAILABLE.md when adding control RPCs
+alwaysApply: true
+---
+
+# Core: Node is not a Qt process
+
+Do not put Qt windows, PySide, or QApplication in `src/corvus_node/` (except a thin `corvus gui` launcher). GUI runtime lives under `gui/corvus_gui/`.
+
+When you add or change a host AF_UNIX control RPC, update `docs/gui/AVAILABLE.md` in the same change. Mark matching rows in `gui/REQUESTS.md` `shipped` or `rejected`.
+
+The GUI is the same operator layer as the CLI. It talks to Node over AF_UNIX only. No TCP product mode. No Firecracker from the GUI.

@@ -3,17 +3,17 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 **Last Updated:** 2026-08-31
-**Related Documents:** AGENT-WORKFLOW.md, POLICY.md, OPERATIONS.md, CHANGES.md, SECURITY.md
+**Related Documents:** AGENT-WORKFLOW.md, POLICY.md, OPERATIONS.md, CHANGES.md, SECURITY.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants here, update CHANGES.md, and do not contradict core fundamentals. Architecture graph: CLI/GUI → host AF_UNIX → Node → allowed workspaces; Node → AF_VSOCK → Firecracker VM (E1–E4). No supervisor box.
 
 # Corvus-Node Architecture Overview
 
-**Status:** Current — v0.1.6 guided installer
+**Status:** Current — v0.1.7 splash GUI
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
-## v0.1.6 graph (authoritative)
+## v0.1.7 graph (authoritative)
 
 ```
          CLI / GUI
@@ -43,7 +43,7 @@ These principles must be respected across all documents and code:
 5. **Launch-time immutability** — Tools and the workspace allowlist are selected at launch. Changing them requires a new microVM.
 6. **Host-owned memory** — Persistent memory lives on the host (Node). v1 is a `private` namespace for this one identity. Engine 4 is the guest client.
 7. **Full auditability of every hop** — Every message is logged with correlation ids. Audit is durable on the host (hash-chained JSONL), not in the guest and not in the jail instance dir.
-8. **4-engine model** — The Firecracker VM contains exactly four engines (tools, channels, LLM, memory). v0.1.6 still runs them in one guest process. `source_engine` is a claim; hop MAC does not authenticate a pwned guest.
+8. **4-engine model** — The Firecracker VM contains exactly four engines (tools, channels, LLM, memory). v0.1.7 still runs them in one guest process. `source_engine` is a claim; hop MAC does not authenticate a pwned guest.
 9. **Default deny, chat implicit** — RBAC is baked into Node. Basic LLM chat is allowed; anything else is an added rule or elevation. CLI writes rules; it does not skip the filter.
 10. **Hop integrity** — Host mints the hop key (`session_init`). Later vsock envelopes carry seq + HMAC bound to `vm_instance_id`. Mid-path alteration is dropped and flagged. HMAC does not prove user intent.
 11. **Jailer is the VMM path** — The Node **service** (`corvus serve`, systemd) requires root, jailer, KVM, and hashed kernel/rootfs/Firecracker/jailer. Install is `./install.sh` (sudo when needed) into `$HOME/Corvus-Node`; a git checkout installs that tree, `corvus update` is the GitHub release wheel. Jail chroots stay `/var/lib/corvus-node`. The operator CLI (`start` / `vm start` / `chat` / `vm stop`) talks to Node over host AF_UNIX and does not use sudo. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM). `vm start` starts the guest with no extra prompt. `vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`). No raw Firecracker. No TCP product mode.
@@ -51,7 +51,7 @@ These principles must be respected across all documents and code:
 
 ## Product
 
-Corvus-Node is a **single-agent** harness. v0.1.6 ships a guided installer (`./install.sh` from a checkout installs that tree; `corvus update` is the GitHub release wheel) and the **operator CLI** (`start` / `vm start` / `chat` / `vm stop` / `status` / `settings` / `run --once` / `update`) at the same layer a GUI will use later: a thin client of Node. Node owns jailer, vsock, RBAC, and the control socket. Social gateways (Telegram, WhatsApp) identify principals on Node later. A fleet control plane is Corvus Hypervisor — later, not a box in this graph. Host-root / SEV-SNP is out of scope: if the box is owned, RAM dumps win.
+Corvus-Node is a **single-agent** harness. v0.1.7 ships a guided installer (`./install.sh` from a checkout installs that tree; `corvus update` is the GitHub release wheel, CLI and GUI) and the **operator CLI** (`start` / `vm start` / `chat` / `gui` / `vm stop` / `status` / `settings` / `run --once` / `update`). `corvus gui` is a PySide6 splash on the same layer as the CLI: a thin client of Node. The splash does not talk to Node in this version. Node owns jailer, vsock, RBAC, and the control socket. The GUI team owns `gui/`; core publishes the socket contract in `docs/gui/AVAILABLE.md`. Social gateways (Telegram, WhatsApp) identify principals on Node later. A fleet control plane is Corvus Hypervisor — later, not a box in this graph. Host-root / SEV-SNP is out of scope: if the box is owned, RAM dumps win.
 
 Allowed workspaces are attached to **Node**. `--workspace /path` is a live host directory Node may read and write after RBAC. File tools use `/workspace` paths that Node maps onto that tree. The rest of the host is invisible. The guest does not mount the host folder.
 
@@ -61,7 +61,7 @@ Node ↔ guest is **AF_VSOCK** only. CLI/GUI ↔ Node is **host AF_UNIX** (contr
 
 ## Major components
 
-- **CLI / GUI** — operator surface for this one agent (CLI is the console that writes rules; same layer as a later GUI)
+- **CLI / GUI** — operator surface for this one agent (CLI writes rules; `corvus gui` is the splash in this preview; later windows use the same AF_UNIX socket)
 - **Node (host)** — Corvus-Node: firewall policy, principals, hop MAC, durable audit, LLM gateway, memory store, workspace allowlist, jailer launch, vsock, operator control socket, channel adapters
 - **Allowed workspaces** — host directories Node may read and write after RBAC; not a free view of the machine
 - **Firecracker VM** — isolation boundary, started only via jailer

@@ -15,8 +15,9 @@ The product name is **Corvus-Node**. `corvus` is only the operator CLI command. 
    - `docs/architecture/AGENT-WORKFLOW.md` (guest engine behavior)
    - `docs/planning/OPERATIONS.md` (this-tree vs GitHub release, before-merge loop, bake, smoke)
    - Root `README.md` (operator: GitHub Release tarball, not a git clone)
+   - `docs/gui/AVAILABLE.md` (control-socket RPCs the GUI may use)
 
-2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`.
+2. **Implementation code** lives under `src/corvus_node/` (`protocol`, `node` including control/settings/daemon, `runtime`, `policy`, `identity`, `gateway`, `audit`, `llm`, `memory`, `tools`, `vm`). Guest entry is `guest/`. GUI runtime is `gui/corvus_gui/` (Qt). Core owns `docs/gui/AVAILABLE.md`. The GUI team owns `gui/` (including `gui/REQUESTS.md`) and must not edit Node, guest, jailer, or packaging.
 
 3. **Changelog is Mandatory**:
    - Every change must be recorded in root `CHANGES.md` with proper format and today's date.
@@ -27,9 +28,10 @@ The product name is **Corvus-Node**. `corvus` is only the operator CLI command. 
    - `corvus status` runs without KVM and reports isolation gaps plus a GitHub version check.
    - `./install.sh` once (`$HOME/Corvus-Node` venv + group + systemd Node; `corvus` on PATH uses group `corvus` via `sg`). Operator `vm` / `chat` / `run` do not use sudo. `sudo make install` is the inner privileged step.
    - `corvus vm start|stop|status` is the Firecracker guest. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM; `--yes` starts it). `vm start` starts the guest with no extra prompt. `vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then the Node systemd unit (confirmation; sudo for `systemctl stop`).
-   - `corvus update` is for the **installed** app vs GitHub **releases** (wheel into `$HOME/Corvus-Node/venv`, not a git clone). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then installs, then starts Node again. `--yes` skips the prompts. It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.6` while GitHub is still `0.1.5`).
+   - `corvus update` is for the **installed** app vs GitHub **releases** (wheel into `$HOME/Corvus-Node/venv`, not a git clone). It upgrades the CLI **and** GUI runtime (PySide6 is a required wheel dependency). It asks to upgrade or keep the current version. If Node is running it then confirms, shuts down the guest and Node, then installs, then starts Node again. `--yes` skips the prompts. It must **not** overwrite a local unreleased tree (dirty, ahead of origin, or version newer than GitHub — the pre-PR internal test case, e.g. local `0.1.7` while GitHub is still `0.1.6`).
+   - `corvus gui` launches the splash (this preview). It checks PySide/Qt first and fail-closes with the version id if missing. `./install.sh` installs those deps (pip PySide6 plus host xcb/EGL libs). If splash fail-closes on missing OS libs, re-run `./install.sh`. The splash does not talk to Node and does not write launch rules.
    - `./install.sh` from a git checkout (or an unpacked snapshot with `src/`) installs **this tree**. `--release`, or no local source, uses the GitHub release wheel. The installer does not announce a newer GitHub version; `corvus status` / `corvus update` do. Live KVM tests (`make smoke`) need that installed Node. `make test` does not. After clone changes, run `./install.sh` again before smoke.
-   - **Every new version is a GitHub Release.** Bump `pyproject.toml`, `src/corvus_node/__init__.py`, and README together. Merge to `main`; `.github/workflows/release.yml` publishes `vX.Y.Z` (wheel + install tarball) if that version is not released yet. Do not ship a version string without that Release.
+   - **GitHub Release is a batch, not a per-PR tax.** Bump `pyproject.toml`, `src/corvus_node/__init__.py`, and README only when operators should get new files. Merge other work at the current version. `.github/workflows/release.yml` publishes `vX.Y.Z` if that version has no Release yet; later merges on the same version skip (one version string, one wheel). Do not ship a version string without that Release. Contributors use `./install.sh` from the clone for unreleased `main`. Operators use `corvus update` when the version on GitHub is newer.
    - **Real timestamps.** Never `export GIT_AUTHOR_DATE` or `GIT_COMMITTER_DATE` (including when rewriting a commit). Unset them if they are already in the environment. GitHub lists files by author date. Commits, `CHANGES.md`, docs **Last Updated**, and GitHub Releases use the wall clock. `make test` refuses those variables.
    - **Branding.** The product is **Corvus-Node**. `corvus` is only the operator CLI. Never call this product Corvus (a different creator's project). Commits, docs, and CLI copy are **Black Rain Labs - Research & Development Division**. Never add Cursor as an author. Strip `Co-authored-by: Cursor`, Made by, Created by, Generated by, and similar AI trailers (`packaging/strip-ai-trailers.sh`, `.githooks/commit-msg`). Human GitHub Contributors and human `Co-authored-by` lines are allowed.
 
@@ -52,6 +54,8 @@ The product name is **Corvus-Node**. `corvus` is only the operator CLI command. 
    - Workspace host paths are an allowlist on **Node**. Node reads and writes those files after RBAC. The guest does not mount the host folder.
 
 8. **Do not copy Corvus Hypervisor.** Use it as a principles spec. Do not paste `src/corvus/`, the Operator Console, catalogs, or grants.
+
+9. **GUI vs core.** GUI agents edit only `gui/`. They read AVAILABLE; they file requests in `gui/REQUESTS.md`. Core implements Node RPCs and updates AVAILABLE. Releases ship `gui/corvus_gui/` only (not REQUESTS, not this README, not Cursor rules).
 
 See the full workflow rules in `docs/architecture/AGENT-WORKFLOW.md`.
 

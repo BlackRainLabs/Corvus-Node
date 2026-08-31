@@ -1,0 +1,15 @@
+---
+description: GUI team — edit only gui/; read AVAILABLE; do not change Node
+globs: gui/**
+---
+
+# GUI team
+
+You own `gui/` (Qt runtime and `gui/REQUESTS.md`). The product is **Corvus-Node**. `corvus` is only the operator CLI.
+
+- Read `docs/gui/AVAILABLE.md`. Call only RPCs listed there.
+- Add needs to `gui/REQUESTS.md`. Do not implement them on Node yourself.
+- Do not edit `src/corvus_node/`, `guest/`, or `packaging/`.
+- Do not write launch rules from the splash. POLICY: GUI is untrusted until the principal is `operator`.
+- Do not copy Corvus Hypervisor console, catalogs, or grants.
+- Commits and comments are **Black Rain Labs - Research & Development Division**. No Cursor co-author.
