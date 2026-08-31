@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from corvus_node import __version__
 
-THIS_BUILD = "chat, start/stop, echo, file read/write"
-NOT_IN_THIS_BUILD = "live AI model, extra skills, saved memory, graphical app"
+THIS_BUILD = "chat, start/stop, echo, file read/write, splash GUI"
+NOT_IN_THIS_BUILD = "live AI model, extra skills, saved memory, full operator window"
 LLM_NAME = "stub"
 CLI_NAME = "corvus"
 
@@ -18,6 +18,7 @@ HELP_BLURB = (
     "Install once (./install.sh), then:\n"
     "  corvus start        bring Corvus-Node up (asks before the VM; Enter skips)\n"
     "  corvus vm start   →   corvus chat   →   /exit   →   corvus vm stop\n"
+    "  corvus gui          splash (this preview; does not talk to the agent)\n"
     "  corvus stop         shut everything down (asks first)\n"
     "The agent stays isolated. You do not sudo to chat."
 )
@@ -29,8 +30,9 @@ HELP_EPILOG = (
     "(Enter skips the VM). vm start / chat / vm stop talk to the agent. "
     "Corvus-Node stays ready in the background after vm stop. corvus stop shuts the "
     "agent and Corvus-Node down (asks first). chat lasts until /exit. "
-    "corvus update installs a newer GitHub release "
-    "(stops Corvus-Node first if it is running; asks before replacing)."
+    "corvus gui shows the splash if PySide/Qt is installed. "
+    "corvus update installs a newer GitHub release (CLI and GUI; "
+    "stops Corvus-Node first if it is running; asks before replacing)."
 )
 
 

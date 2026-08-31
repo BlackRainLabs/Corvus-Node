@@ -35,6 +35,8 @@ def test_privileged_install_puts_corvus_on_usr_local_bin() -> None:
     text = (ROOT / "packaging" / "install.sh").read_text()
     assert "/usr/local/bin/corvus" in text
     assert "exec sg" in text
+    assert "GUI extras skipped" in text
+    assert "CLI is available" in text
     assert WRAPPER.is_file()
     assert SCRIPT.is_file()
     mode = WRAPPER.stat().st_mode
@@ -50,6 +52,8 @@ def test_help_mentions_brand_and_password_story() -> None:
     assert "chat is not root" in out.lower()
     assert "password" in out.lower()
     assert "isolation" in out.lower()
+    assert "gui" in out.lower()
+    assert "cli still works" in out.lower() or "cli is available" in out.lower()
     assert "--release" in out
     assert "git checkout" in out.lower() or "this checkout" in out.lower()
 
@@ -118,6 +122,12 @@ def test_installer_script_stops_a_running_node() -> None:
     assert "status --brief" in text
     assert 'echo "${C_BOLD}Status${C_RST}"' in text
     assert "asks before the VM" in text
+    assert "corvus gui" in text
+    assert "libxcb-cursor0" in text
+    assert "mesa-libGL" in text
+    assert "missing_qt_pkgs" in text
+    assert "CLI is available" in text
+    assert "optional for corvus gui" in text
 
 
 def test_release_and_local_flags_conflict() -> None:

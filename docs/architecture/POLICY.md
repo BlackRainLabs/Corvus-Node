@@ -3,19 +3,19 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 **Last Updated:** 2026-08-31
-**Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, OPERATIONS.md, CHANGES.md
+**Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, OPERATIONS.md, CHANGES.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md. Node performs deterministic RBAC only. No LLM inspection on the host. CLI writes rules; it does not skip the filter.
 
 # Policy — RBAC baked in at the core
 
-v0.1.6. Filter, principal, hop MAC, and default-deny chat live in **Node**. This is not a bolt-on.
+v0.1.7. Filter, principal, hop MAC, and default-deny chat live in **Node**. This is not a bolt-on.
 
 ## Trust model
 
-The local CLI is the **firewall console**, at the same layer as a later GUI. It writes launch rules (`settings`, `--tools`, `--workspace`). Every turn still hits the filter. `corvus vm start` boots one VM with those rules. `corvus chat` attaches; it does not change the allowlist. `run --once "hello"` is one chat turn then exit. `--workspace` does not imply file tools. Changing tools or workspace requires `vm stop` then `vm start`.
+The local CLI is the **firewall console**, at the same layer as the GUI. It writes launch rules (`settings`, `--tools`, `--workspace`). Every turn still hits the filter. `corvus vm start` boots one VM with those rules. `corvus chat` attaches; it does not change the allowlist. `run --once "hello"` is one chat turn then exit. `--workspace` does not imply file tools. Changing tools or workspace requires `vm stop` then `vm start`.
 
-GUI and social channels later are **untrusted interfaces**. They never write rules unless the principal is bound to role `operator`. The gateway lives on Node, not in the guest. Engine 2 only formats `agent_response`. No supervisor box.
+The v0.1.7 splash (`corvus gui`) is a **local** window. It does not talk to Node and must not write launch rules. GUI and social channels are **untrusted interfaces**. They never write rules unless the principal is bound to role `operator`. The gateway lives on Node, not in the guest. Engine 2 only formats `agent_response`. No supervisor box.
 
 **Default deny. Chat is the implicit allow.** Anything else is an added rule or an elevation.
 
@@ -32,8 +32,8 @@ First match wins. Implicit last rule: deny.
 
 ## Zones and principals
 
-- Zone `console` — local CLI (and later GUI) over the host control socket. Role `operator`. Writes rules.
-- Zone `local_gui` — reserved for GUI login later.
+- Zone `console` — local CLI (and GUI on the same socket) over the host control socket. Role `operator`. Writes rules.
+- Zone `local_gui` — reserved for GUI login later. The v0.1.7 splash does not bind a principal.
 - Zone `channel` — social adapters. Default role `user`, chat-only.
 
 Principal: `{issuer, subject, role}` (e.g. `local:operator`, `telegram:12345`). v0.1.2 CLI always uses `local:operator`. Telegram/WhatsApp adapters are stubs.

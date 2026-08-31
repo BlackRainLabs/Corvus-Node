@@ -1,0 +1,6 @@
+# Path ownership for this repo. GitHub teams are not wired yet.
+# /gui/              GUI team (Qt runtime + REQUESTS.md). Do not edit Node from here.
+# /docs/gui/         Core team (AVAILABLE.md control-socket contract).
+# /src/corvus_node/  Core (Node, CLI launcher).
+# /guest/            Core (four engines).
+# /packaging/        Core (installer, release snapshot).

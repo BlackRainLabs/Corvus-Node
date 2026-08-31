@@ -1,4 +1,6 @@
-# Publish a GitHub Release for every new version.
+# Publish a GitHub Release for every new version. One version string, one wheel.
+# Merge freely. Bump pyproject / __version__ / README only when operators
+# should get a new Release. An already-released version skips (does not replace).
 
 # Manual: git tag vX.Y.Z && git push origin vX.Y.Z
 # Automatic: merge to main when pyproject version has no release yet.
@@ -63,7 +65,8 @@ jobs:
           python -m build --wheel
           VER="${{ steps.ver.outputs.ver }}"
           tar -czf "dist/corvus-node-${VER}-install.tar.gz" \
-            install.sh packaging guest src/corvus_node pyproject.toml LICENSE README.md
+            install.sh packaging guest src/corvus_node gui/corvus_gui \
+            pyproject.toml LICENSE README.md
           cp "dist/corvus-node-${VER}-install.tar.gz" dist/corvus-node-install.tar.gz
       - name: Publish GitHub Release
         if: steps.ver.outputs.skip != '1'

@@ -3,7 +3,7 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 **Last Updated:** 2026-08-31
-**Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, POLICY.md, ROADMAP.md, CHANGES.md, SECURITY.md
+**Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, POLICY.md, ROADMAP.md, CHANGES.md, SECURITY.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 
 # Operations
@@ -18,6 +18,7 @@ corvus status
 corvus start              # Node; asks before the VM (Enter skips)
 corvus vm start           # isolated agent, no extra prompt
 corvus chat
+corvus gui                # splash (this preview; does not talk to the agent)
 corvus vm stop
 ```
 
@@ -44,7 +45,7 @@ Do not use `corvus update` or `./install.sh --release` to pick up uncommitted cl
 
 ## Deploy (every new version)
 
-A new version is a GitHub Release (wheel + `corvus-node-install.tar.gz`). Bump `pyproject.toml`, `src/corvus_node/__init__.py`, and the README version together, merge to `main`. CI (`.github/workflows/release.yml`) publishes `vX.Y.Z` if that version has no release yet. Tagging `vX.Y.Z` by hand does the same. Doc-only merges on an already-released version do not cut a new Release.
+A new version is a GitHub Release (wheel + `corvus-node-install.tar.gz`). **Bump only when operators should get it** — not on every PR. Merge work to `main` at the current version; CI publishes `vX.Y.Z` the first time that version lands with no Release yet. Later merges on the same version do not replace the wheel. When you want operators to upgrade, bump `pyproject.toml`, `src/corvus_node/__init__.py`, and the README together in that PR. `corvus update` and `./install.sh --release` compare version numbers. Contributors pick up unreleased `main` with `./install.sh` from the clone. The wheel and tarball include GUI **runtime** (`gui/corvus_gui/`) only — not `gui/REQUESTS.md` or `docs/gui/`. Tagging `vX.Y.Z` by hand does the same.
 
 Commits and Releases use the wall clock. CI unsets `GIT_AUTHOR_DATE`, `GIT_COMMITTER_DATE`, and `SOURCE_DATE_EPOCH` before it builds the wheel and creates the Release. GitHub file listings use **author date**; a frozen stamp makes every touched file look hours old.
 
@@ -72,9 +73,9 @@ corvus start              # Node; asks before the VM (Enter skips)
 corvus vm start
 ```
 
-Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus`, not user-writable), `$HOME/Corvus-Node/bin/corvus`, env at `$HOME/Corvus-Node/env`, hashed assets under `$HOME/Corvus-Node/assets`, control socket under `$HOME/Corvus-Node/run`, and systemd `corvus-node.service`. Firecracker **jail** dirs stay `/var/lib/corvus-node` (short vsock paths; `/run` is `nodev`). After `./install.sh` the operator CLI does not use sudo. Jailer still runs inside the Node service as root. `corvus` on PATH uses group `corvus` via `sg` (no `newgrp` at the end of install).
+Install creates group `corvus`, a venv at `$HOME/Corvus-Node/venv` (`root:corvus`, not user-writable), `$HOME/Corvus-Node/bin/corvus`, env at `$HOME/Corvus-Node/env`, hashed assets under `$HOME/Corvus-Node/assets`, control socket under `$HOME/Corvus-Node/run`, and systemd `corvus-node.service`. `pip` then tries PySide6 (optional extra). The installer also tries host Qt libraries (xcb/EGL/fontconfig) on apt and dnf. If those GUI steps fail, the install continues; the CLI and Node stay available. `corvus gui` fail-closes until they are present. Firecracker **jail** dirs stay `/var/lib/corvus-node` (short vsock paths; `/run` is `nodev`). After `./install.sh` the operator CLI does not use sudo. Jailer still runs inside the Node service as root. `corvus` on PATH uses group `corvus` via `sg` (no `newgrp` at the end of install).
 
-`corvus update` refreshes that **installed** prefix from a newer GitHub **release wheel** (`pip` into `$HOME/Corvus-Node/venv`). It does not `git pull` this tree and it does not clone the repo. It asks to upgrade or keep the current version. If Node is running it then explains, confirms, shuts down the guest and Node, then installs, then starts Node again (`--yes` skips the prompts). Sudo is needed because that venv is root-owned and because stopping/starting systemd is a root unit. If you are on a dirty checkout, ahead of `origin/main`, or a version newer than GitHub (typical internal run before a PR merges — local `0.1.6`, GitHub still `0.1.5`), it reports unreleased and does not install. `status` always prints the same check. No GitHub Release is **no GitHub release yet**, not unreachable. See **Deploy** above. Tests set `CORVUS_NODE_SKIP_UPDATE_CHECK=1`.
+`corvus update` refreshes that **installed** prefix from a newer GitHub **release wheel** (`pip` into `$HOME/Corvus-Node/venv`). The wheel includes the GUI runtime (`corvus_gui`); PySide6 is optional. A failed GUI extra does not abort the update. It does not `git pull` this tree and it does not clone the repo. It asks to upgrade or keep the current version. If Node is running it then explains, confirms, shuts down the guest and Node, then installs, then starts Node again (`--yes` skips the prompts). Sudo is needed because that venv is root-owned and because stopping/starting systemd is a root unit. Host Qt libraries (xcb/EGL) are attempted by `./install.sh`, not by `corvus update`. If `corvus gui` fail-closes on missing OS libs, re-run `./install.sh`. If you are on a dirty checkout, ahead of `origin/main`, or a version newer than GitHub (typical internal run before a PR merges — local `0.1.7`, GitHub still `0.1.6`), it reports unreleased and does not install. `status` always prints the same check. No GitHub Release is **no GitHub release yet**, not unreachable. See **Deploy** above. Tests set `CORVUS_NODE_SKIP_UPDATE_CHECK=1`.
 
 ## Guest assets
 
@@ -108,6 +109,7 @@ corvus status
 corvus start
 corvus vm start
 corvus chat
+corvus gui
 corvus vm stop
 corvus stop
 corvus run --once "hello"
@@ -116,7 +118,7 @@ corvus vm start --workspace /path/to/tree --tools file_read,file_write
 corvus update
 ```
 
-If the Node service is not running, `corvus start` brings it up (asks before the VM). `vm` / `chat` **fail closed** until Node is up. `status` still runs and shows `Node: down`. There is no TCP fallback and no raw Firecracker.
+If the Node service is not running, `corvus start` brings it up (asks before the VM). `vm` / `chat` **fail closed** until Node is up. `status` still runs and shows `Node: down`. `corvus gui` does not need Node; it fail-closes if PySide/Qt is missing. There is no TCP fallback and no raw Firecracker.
 
 Default vsock port: `4040`. Guest CID is assigned at launch. `--workspace /path` is a live host directory Node may read and write after RBAC (one path). The guest does not mount that folder. Writes land on the host immediately. A later turn, or your editor, sees the same files.
 
@@ -127,7 +129,7 @@ corvus run --once --workspace /path/to/tree --tools file_read "review notes.txt"
 corvus run --once --workspace /path/to/tree --tools file_write "edit notes.txt to 'done'"
 ```
 
-`run --once "hello"` is one chat turn then exit. If the Node service is up it uses that VM path; if you are root and the service is down (legacy smoke) it still runs in-process. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM; `--yes` starts it). `vm start` boots a guest on the idle Node service with no extra prompt. `corvus vm stop` shuts down the guest only (`session_end`, then reap jailer; confirmation; Node stays idle). `corvus stop` does that, then stops the Node systemd unit (confirmation; sudo for `systemctl stop`). `vm status` is the guest only. `status` leads with Node and VM, then this preview, version, and isolation (`--brief` is Node and VM only). `chat` is a live session: sticky header (model, context placeholder, `/exit`), conversation until `/exit`. `--tools` is an operator allow rule, not a filter bypass. See [POLICY.md](../architecture/POLICY.md).
+`run --once "hello"` is one chat turn then exit. If the Node service is up it uses that VM path; if you are root and the service is down (legacy smoke) it still runs in-process. `corvus start` brings Node up and asks before starting the guest (Enter skips the VM; `--yes` starts it). `vm start` boots a guest on the idle Node service with no extra prompt. `corvus vm stop` shuts down the guest only (`session_end`, then reap jailer; confirmation; Node stays idle). `corvus stop` does that, then stops the Node systemd unit (confirmation; sudo for `systemctl stop`). `vm status` is the guest only. `status` leads with Node and VM, then this preview, version, and isolation (`--brief` is Node and VM only). `chat` is a live session: sticky header (model, context placeholder, `/exit`), conversation until `/exit`. `corvus gui` is the splash (this preview). `--tools` is an operator allow rule, not a filter bypass. See [POLICY.md](../architecture/POLICY.md). GUI contract: [AVAILABLE.md](../gui/AVAILABLE.md).
 
 `--yes` / `-y` skips the confirmation on `vm stop`, `stop`, and `update`, and on `start` it starts the VM without asking.
 
