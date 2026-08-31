@@ -4,7 +4,7 @@
 
 You talk to it in the terminal. It stays in its own locked room — a tiny virtual machine — and cannot wander the rest of your computer. You choose whether it may see a folder. The model never gets a free pass around those rules.
 
-[Black Rain Labs](https://www.BlackRainLabs.com) · **Version 0.1.8** · [AGPLv3](LICENSE)
+[Black Rain Labs](https://www.BlackRainLabs.com) · **Version 0.1.9** · [AGPLv3](LICENSE)
 
 This preview uses a **practice model** (a stub) so you can try the real isolation path today. A live model comes later.
 

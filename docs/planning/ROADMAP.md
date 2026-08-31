@@ -8,12 +8,12 @@
 
 # Roadmap
 
-## Now (v0.1.8 — Kubuntu install)
+## Now (v0.1.9 — start after stop)
 
 - `./install.sh` into `$HOME/Corvus-Node` (idempotent; sudo only when needed; `corvus` on PATH uses group `corvus` automatically)
 - First-install bake works on Ubuntu/Kubuntu (`mktemp` unpack, Debian archive keyring, payload copy without host pydantic)
 - Operator CLI command is `corvus` (`start`, `vm start|stop|status`, `chat`, `gui`, `status`, `settings`, `run --once`, `update`)
-- `corvus start` brings Node up and asks before the guest (Enter skips the VM). `corvus vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd)
+- `corvus start` brings Node up and asks before the guest (Enter skips the VM). `corvus vm stop` shuts down the guest only (confirmation; Node stays up). `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). After `corvus stop`, start again with `corvus start` (not `./install.sh`)
 - `corvus gui` splash (PySide6). Fail-closes if Qt/PySide is missing. Does not talk to Node. Does not write launch rules
 - Installer tries PySide6 (optional extra) and host xcb/EGL/fontconfig libs; a miss does not abort (CLI stays). `corvus update` upgrades the wheel, then tries GUI extras
 - Releases ship `gui/corvus_gui/` only (not REQUESTS.md or GUI workflow docs)
