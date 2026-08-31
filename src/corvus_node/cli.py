@@ -675,15 +675,23 @@ def _update(*, yes: bool) -> int:
     sys.stdout.write(format_version_status(status))
     if not status.update_available or not status.github:
         return 0
+    print(
+        f"Installed: {status.local}. GitHub release: {status.github}.",
+        file=sys.stderr,
+    )
+    print("Say no to keep the version you have.", file=sys.stderr)
+    if not _confirm(f"Upgrade to GitHub release {status.github}?", yes=yes):
+        print(f"corvus: keeping {status.local}", file=sys.stderr)
+        return 0
     stop_rc, restart = _stop_running_for_replace(yes=yes, why="update")
     if stop_rc != 0:
         return stop_rc
     ref = github_install_ref(status.github)
-    print(f"corvus: installing {ref}", file=sys.stderr)
+    print(f"corvus: installing GitHub release wheel {ref}", file=sys.stderr)
     pip_rc = _pip_upgrade(ref)
     if pip_rc != 0:
         print(
-            "corvus: pip failed; sudo corvus update (updating the installed app is a reinstall)",
+            "corvus: pip failed; sudo corvus update (installs the GitHub release wheel)",
             file=sys.stderr,
         )
         if restart:
