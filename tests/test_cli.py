@@ -13,6 +13,8 @@ import pytest
 from corvus_node import __version__
 from corvus_node.cli import main
 from corvus_node.node.info import format_runtime_status, format_vm_status
+from corvus_node.node.settings import launch_path, load_launch
+from corvus_node.node.workspace import default_workspace_path
 
 
 def test_run_once_fails_closed_without_isolation(
@@ -178,6 +180,31 @@ def test_settings_roundtrip_cli(
     capsys.readouterr()
     assert main(["settings"]) == 0
     assert "(none)" in capsys.readouterr().out
+
+
+def test_status_creates_disabled_workspace(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["status"]) == 0
+    path = default_workspace_path().resolve()
+    assert path.is_dir()
+    assert (path.stat().st_mode & 0o777) == 0o700
+    assert not launch_path().exists()
+    out = capsys.readouterr().out
+    assert f"Workspace: {path} (disabled)" in out
+
+
+def test_settings_default_allows_then_unset_keeps_directory(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert main(["settings", "set", "workspace", "default"]) == 0
+    path = default_workspace_path().resolve()
+    assert path.is_dir()
+    out = capsys.readouterr().out
+    assert f"{path} (allowed)" in out
+    assert load_launch().workspace == str(path)
+    assert main(["settings", "unset", "workspace"]) == 0
+    assert path.is_dir()
+    assert load_launch().workspace is None
+    assert "(disabled)" in capsys.readouterr().out
 
 
 def test_chat_live_until_exit(

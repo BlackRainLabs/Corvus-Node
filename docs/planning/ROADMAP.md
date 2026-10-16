@@ -2,13 +2,13 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Related Documents:** CHANGES.md, OPERATIONS.md, OVERVIEW.md, POLICY.md, SECURITY.md
 **Must Update on Change:** CHANGES.md
 
 # Roadmap
 
-## Now (v0.1.9 — start after stop)
+## Now (v0.1.9 — default workspace)
 
 - `./install.sh` into `$HOME/Corvus-Node` (idempotent; sudo only when needed; `corvus` on PATH uses group `corvus` automatically)
 - First-install bake works on Ubuntu/Kubuntu (`mktemp` unpack, Debian archive keyring, payload copy without host pydantic)
@@ -25,6 +25,8 @@
 - Each version ships `--help` / `status` that name this build; unimplemented verbs fail closed
 - Each new version is a GitHub Release (wheel + install tarball) via `.github/workflows/release.yml` on merge to `main` or a `v*` tag. Bump only when operators should get a batch; later merges on the same version do not replace the wheel.
 - Live host workspace, jailer, hop MAC, RBAC, stub chat
+- Default workspace `$XDG_DATA_HOME/corvus-node/workspace` (or `~/.local/share/corvus-node/workspace`), mode `0700`, created by the operator CLI. Disabled until `settings set workspace default`. `settings unset workspace` leaves the directory in place
+- `file_list` lists one directory level on an allowed workspace (stub-first)
 - Unit tests without a VM (`make test`); installed-Node KVM smoke (`make smoke`)
 
 ## Next

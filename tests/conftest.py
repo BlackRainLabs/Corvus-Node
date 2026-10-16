@@ -24,6 +24,7 @@ from corvus_node.node.control import (
 @pytest.fixture(autouse=True)
 def isolate_host_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
     monkeypatch.setenv("CORVUS_NODE_RUNTIME_DIR", str(tmp_path / "runtime"))
     monkeypatch.setenv("CORVUS_NODE_SKIP_UPDATE_CHECK", "1")
 

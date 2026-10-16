@@ -18,6 +18,7 @@ from corvus_node.llm.stub import StubLlm
 from corvus_node.memory.service import MemoryService
 from corvus_node.node.workspace import (
     WorkspaceError,
+    host_file_list,
     host_file_read,
     host_file_write,
     resolve_host_workspace,
@@ -137,6 +138,8 @@ class NodeSession:
         path = str(arguments.get("path", ""))
         if name == "file_read":
             return host_file_read(root, path)
+        if name == "file_list":
+            return host_file_list(root, path)
         return host_file_write(root, path, str(arguments.get("content", "")))
 
     async def _send_session_init(self, writer: asyncio.StreamWriter) -> None:

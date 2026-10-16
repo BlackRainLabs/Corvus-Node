@@ -1,8 +1,25 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## [2026-10-16] - default workspace stays disabled until allowed
+
+**Documents Modified:**
+- `src/corvus_node/node/workspace.py`, `src/corvus_node/node/settings.py`, `src/corvus_node/cli.py`, `src/corvus_node/node/info.py`
+- `src/corvus_node/policy/engine.py`, `src/corvus_node/node/session.py`, `src/corvus_node/runtime/turn.py`, `src/corvus_node/llm/stub.py`, `src/corvus_node/tools/paths.py`
+- `tests/test_workspace.py`, `tests/test_cli.py`, `tests/test_policy.py`, `tests/test_stub.py`, `tests/conftest.py`
+- `README.md`, `AGENTS.md`, `SECURITY.md`
+- `docs/architecture/OVERVIEW.md`, `docs/architecture/POLICY.md`, `docs/architecture/AGENT-WORKFLOW.md`
+- `docs/planning/ROADMAP.md`, `docs/planning/OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- The operator CLI creates `$XDG_DATA_HOME/corvus-node/workspace` (or `~/.local/share/corvus-node/workspace`, mode `0700`) and does not put it on the allowlist. `settings set workspace default` allows it. `settings unset workspace` turns it off and leaves the directory. `file_list` lists one directory level on an allowed workspace. Version stays **0.1.9**.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
 
 ## [2026-08-31] - v0.1.9 start after stop
 

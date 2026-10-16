@@ -40,7 +40,7 @@ The product name is **Corvus-Node**. `corvus` is only the operator CLI command. 
    - Respect the 4-Engine Model strictly.
    - Engine 3 (LLM) must never directly call tools or memory.
    - Guest-side tools (`echo`) run in the guest after Node RBAC allow. Node never executes arbitrary agent tool code.
-   - File I/O on `--workspace` is Node-owned host bytes (like memory). Engine 3 still never opens files.
+   - File I/O on an allowed workspace is Node-owned host bytes (like memory). The default directory is created disabled until the operator allows it. Engine 3 still never opens files.
    - **Stub first:** a new tool or guest-visible LLM behavior is not done until `StubLlm` can exercise it and `make test` covers it. The stub is deterministic (keywords + allowlist), not a provider. Add a case in `tests/test_stub.py`. Live KVM smoke is `make smoke` against the installed Node (`CORVUS_NODE_SMOKE=1`, no sudo).
 
 6. **Documentation Standards**:

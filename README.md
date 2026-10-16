@@ -57,7 +57,7 @@ corvus vm stop             # end the session; Corvus-Node stays ready
 | `corvus run --once "hello"` | One reply, then done |
 | `corvus update` | Install a newer GitHub release for the CLI and GUI (asks before replacing; stops Corvus-Node first if it is running) |
 
-Optional: `--tools echo` lets the agent echo text back. `--workspace /path --tools file_read` lets it read files in that folder only — nowhere else. `corvus settings` remembers those choices. A running session does not pick up new rules; `vm stop` then `vm start`. Add `--yes` to skip the “are you sure?” prompt on stop or update.
+Optional: `--tools echo` lets the agent echo text back. `corvus status` creates a default folder and leaves it off until `corvus settings set workspace default`. `--workspace /path --tools file_read,file_list` lets it read or list files in that folder only — nowhere else. `corvus settings` remembers those choices. A running session does not pick up new rules; `vm stop` then `vm start`. Add `--yes` to skip the “are you sure?” prompt on stop or update.
 
 ### If something goes wrong
 
@@ -69,7 +69,7 @@ Optional: `--tools echo` lets the agent echo text back. `--workspace /path --too
 
 ## What this preview includes
 
-Chat, start and stop, an echo tool, reading or writing files in a folder you allow, and a splash GUI (`corvus gui`).
+Chat, start and stop, an echo tool, a default folder that stays off until you allow it, reading, listing, or writing files in a folder you allow, and a splash GUI (`corvus gui`).
 
 **Not yet:** a live AI model, extra skills, long-term memory, or a full operator window. Commands that are not built yet say so and do nothing. If `corvus gui` cannot find PySide/Qt, it says so — run `./install.sh` or `corvus update`.
 

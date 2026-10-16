@@ -15,6 +15,7 @@ from corvus_node.runtime.wire import Wire
 TOOL_SCHEMAS: dict[str, dict[str, str]] = {
     "echo": {"name": "echo", "description": "Echo text"},
     "file_read": {"name": "file_read", "description": "Read a file under /workspace"},
+    "file_list": {"name": "file_list", "description": "List one directory under /workspace"},
     "file_write": {"name": "file_write", "description": "Write a file under /workspace"},
 }
 HISTORY_MAX = 32
