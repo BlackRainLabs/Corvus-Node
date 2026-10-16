@@ -17,14 +17,15 @@ from corvus_node.protocol.models import (
     Envelope,
     MessageClass,
 )
-from corvus_node.tools.paths import workspace_relpath
+from corvus_node.tools.paths import workspace_list_relpath, workspace_relpath
 
 TOOL_TAGS: dict[str, str] = {
     "echo": "low",
     "file_read": "low",
+    "file_list": "low",
     "file_write": "write",
 }
-FILE_TOOLS = frozenset({"file_read", "file_write"})
+FILE_TOOLS = frozenset({"file_read", "file_write", "file_list"})
 RISKY_TAGS = frozenset({"write", "exec", "net"})
 Decision = Literal["allow", "deny", "elevate", "flag"]
 
@@ -159,14 +160,19 @@ class PolicyEngine:
                     return PolicyDecision(
                         "deny",
                         "workspace",
-                        "file tools require --workspace",
+                        "file tools require an allowed workspace",
                     )
                 arguments = message.payload.get("arguments")
                 if arguments is not None:
                     if not isinstance(arguments, dict):
                         arguments = {}
                     path = str(arguments.get("path", ""))
-                    if workspace_relpath(path) is None:
+                    under = (
+                        workspace_list_relpath(path)
+                        if name == "file_list"
+                        else workspace_relpath(path)
+                    )
+                    if under is None:
                         return PolicyDecision(
                             "deny",
                             "path",

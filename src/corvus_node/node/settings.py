@@ -12,7 +12,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from corvus_node import __version__
-from corvus_node.node.workspace import WorkspaceError, resolve_host_workspace
+from corvus_node.node.workspace import (
+    WorkspaceError,
+    ensure_default_workspace,
+    resolve_host_workspace,
+)
+
+DEFAULT_WORKSPACE = "default"
 
 LAUNCH_NAME = "launch.json"
 
@@ -99,7 +105,17 @@ def merge_launch(
     return LaunchSettings(tools=out_tools, workspace=out_ws)
 
 
-def format_settings(settings: LaunchSettings) -> str:
+def resolve_workspace_setting(value: str) -> str:
+    """`default` allows the operator workspace. Any other value is a host path."""
+    if value.strip() == DEFAULT_WORKSPACE:
+        return str(ensure_default_workspace())
+    return str(resolve_host_workspace(value))
+
+
+def format_settings(settings: LaunchSettings, *, default_workspace: str) -> str:
     tools = ",".join(sorted(settings.tools)) or "(none)"
-    workspace = settings.workspace or "(none)"
+    if settings.workspace:
+        workspace = f"{settings.workspace} (allowed)"
+    else:
+        workspace = f"{default_workspace} (disabled)"
     return f"tools: {tools}\nworkspace: {workspace}\n"

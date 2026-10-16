@@ -83,8 +83,37 @@ def test_operator_visible_file_read() -> None:
 
 
 def test_file_tools_hidden_without_workspace() -> None:
-    policy = PolicyEngine(agent_id="a", allowed_tools=frozenset({"file_read", "file_write"}))
+    policy = PolicyEngine(
+        agent_id="a",
+        allowed_tools=frozenset({"file_read", "file_write", "file_list"}),
+    )
     assert policy.visible_tools() == frozenset()
+
+
+def test_file_list_root_allowed() -> None:
+    policy = PolicyEngine(
+        agent_id="a",
+        allowed_tools=frozenset({"file_list"}),
+        workspace_paths=("/tmp/ws",),
+    )
+    for path in ("", ".", "/workspace", "sub"):
+        decision = policy.evaluate(
+            _msg(
+                EngineId.ENGINE1,
+                "tool_call",
+                {"name": "file_list", "arguments": {"path": path}},
+            )
+        )
+        assert decision.decision == "allow"
+    escape = policy.evaluate(
+        _msg(
+            EngineId.ENGINE1,
+            "tool_call",
+            {"name": "file_list", "arguments": {"path": "../etc"}},
+        )
+    )
+    assert escape.decision == "deny"
+    assert escape.flag_code == "path_escape"
 
 
 def test_file_read_allowed_for_operator() -> None:

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 _PATH = re.compile(r"([\w./-]+\.\w+)")
+_LIST = re.compile(r"\b(list|ls|dir)\b", re.IGNORECASE)
 _WRITE = ("edit", "write", "fix", "change", "update", "create", "replace")
 _READ = ("read", "review", "open", "show", "cat", "look")
 
@@ -76,8 +77,11 @@ def _pick_calls(text: str, names: list[str]) -> list[tuple[str, dict[str, str]]]
     path = _path(text)
     write = any(word in lower for word in _WRITE)
     read = any(word in lower for word in _READ)
+    listing = _LIST.search(text) is not None
     if write and "file_write" in available:
         return [("file_write", {"path": path, "content": _write_content(text)})]
+    if "file_list" in available and listing and not read:
+        return [("file_list", {"path": "/workspace"})]
     if "file_read" in available and (read or "echo" not in available):
         return [("file_read", {"path": path})]
     if "echo" in available:

@@ -42,6 +42,7 @@ from corvus_node.node.info import (
     build_lines,
     format_runtime_status,
     format_vm_status,
+    format_workspace_line,
 )
 from corvus_node.node.session import LaunchConfig
 from corvus_node.node.settings import (
@@ -51,10 +52,15 @@ from corvus_node.node.settings import (
     load_launch,
     merge_launch,
     parse_tools,
+    resolve_workspace_setting,
     save_launch,
 )
 from corvus_node.node.update import check_version, format_version_status, github_install_ref
-from corvus_node.node.workspace import WorkspaceError, resolve_host_workspace
+from corvus_node.node.workspace import (
+    WorkspaceError,
+    default_workspace_path,
+    ensure_default_workspace,
+)
 from corvus_node.vm.launcher import (
     GuestBootTimeout,
     IsolationUnavailable,
@@ -175,7 +181,7 @@ def _launch_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--tools",
         default=None,
-        help="comma-separated tools to allow (echo, file_read, file_write)",
+        help="comma-separated tools to allow (echo, file_read, file_write, file_list)",
     )
     parser.add_argument(
         "--workspace",
@@ -223,17 +229,37 @@ def _launch_errors(exc: BaseException) -> int:
     raise exc
 
 
+def _default_workspace_text() -> str:
+    try:
+        return str(ensure_default_workspace())
+    except WorkspaceError as exc:
+        print(f"corvus: {exc}", file=sys.stderr)
+        return str(default_workspace_path())
+
+
+def _remembered_workspace() -> str | None:
+    try:
+        return load_launch().workspace
+    except SettingsError as exc:
+        print(f"corvus: {exc}", file=sys.stderr)
+        return None
+
+
 def _status(*, brief: bool = False) -> int:
     pid = node_pid()
     snap: dict | None = None
     error = ""
+    default = _default_workspace_text()
     if pid is not None:
         try:
             snap = rpc_status()
         except ControlError as exc:
             error = str(exc)
-    for line in format_runtime_status(pid, snap, error=error):
+    for line in format_runtime_status(pid, snap, error=error, default_workspace=default):
         print(line)
+    running = snap is not None and str(snap.get("state") or "") == "running"
+    if not running and not brief:
+        print(format_workspace_line(_remembered_workspace(), default_workspace=default))
     if pid is None:
         print(f"Hint: {not_running_hint()}")
     if brief:
@@ -262,6 +288,7 @@ def _vm(args: argparse.Namespace) -> int:
         return _vm_stop(yes=bool(getattr(args, "yes", False)))
     if cmd == "start":
         try:
+            ensure_default_workspace()
             merged = _merged_launch(args)
         except (WorkspaceError, SettingsError) as exc:
             print(f"corvus: {exc}", file=sys.stderr)
@@ -282,7 +309,8 @@ def _vm_status() -> int:
     except ControlError as exc:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
-    for line in format_vm_status(snap):
+    default = _default_workspace_text()
+    for line in format_vm_status(snap, default_workspace=default):
         print(line)
     return 0
 
@@ -290,17 +318,22 @@ def _vm_status() -> int:
 def _settings(args: argparse.Namespace) -> int:
     cmd = getattr(args, "settings_cmd", None)
     try:
+        default = str(ensure_default_workspace())
         stored = load_launch()
         if cmd is None:
-            sys.stdout.write(format_settings(stored))
+            sys.stdout.write(format_settings(stored, default_workspace=default))
             if node_pid() is not None:
                 try:
                     snap = rpc_status()
                     tools = ",".join(snap.get("tools") or []) or "(none)"
                     ws = snap.get("workspace") or []
+                    active = ws[0] if ws else None
                     print("active launch (unchanged until vm stop then vm start):")
                     print(f"tools: {tools}")
-                    print(f"workspace: {ws[0] if ws else '(none)'}")
+                    if active:
+                        print(f"workspace: {active} (allowed)")
+                    else:
+                        print(f"workspace: {default} (disabled)")
                 except ControlError:
                     pass
             return 0
@@ -310,7 +343,7 @@ def _settings(args: argparse.Namespace) -> int:
             else:
                 stored = LaunchSettings(
                     tools=stored.tools,
-                    workspace=str(resolve_host_workspace(args.value)),
+                    workspace=resolve_workspace_setting(args.value),
                 )
             save_launch(stored)
         elif cmd == "unset":
@@ -325,7 +358,8 @@ def _settings(args: argparse.Namespace) -> int:
     except (WorkspaceError, SettingsError) as exc:
         print(f"corvus: {exc}", file=sys.stderr)
         return 2
-    sys.stdout.write(format_settings(load_launch()))
+    shown = format_settings(load_launch(), default_workspace=str(ensure_default_workspace()))
+    sys.stdout.write(shown)
     if node_pid() is not None:
         print(
             "corvus: running VM is unchanged until vm stop then vm start",
@@ -378,6 +412,11 @@ def _ensure_node_up() -> int:
 
 
 def _product_start(merged: LaunchSettings, *, yes: bool) -> int:
+    try:
+        ensure_default_workspace()
+    except WorkspaceError as exc:
+        print(f"corvus: {exc}", file=sys.stderr)
+        return 2
     node_rc = _ensure_node_up()
     if node_rc != 0:
         return node_rc

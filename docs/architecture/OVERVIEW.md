@@ -2,14 +2,14 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Related Documents:** AGENT-WORKFLOW.md, POLICY.md, OPERATIONS.md, CHANGES.md, SECURITY.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants here, update CHANGES.md, and do not contradict core fundamentals. Architecture graph: CLI/GUI → host AF_UNIX → Node → allowed workspaces; Node → AF_VSOCK → Firecracker VM (E1–E4). No supervisor box.
 
 # Corvus-Node Architecture Overview
 
-**Status:** Current — v0.1.9 start after stop
+**Status:** Current — v0.1.9 default workspace
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
@@ -53,7 +53,7 @@ These principles must be respected across all documents and code:
 
 Corvus-Node is a **single-agent** harness. v0.1.9 ships a guided installer (`./install.sh` from a checkout installs that tree; `corvus update` is the GitHub release wheel, CLI always, GUI extras if they install) and the **operator CLI** (`start` / `vm start` / `chat` / `gui` / `vm stop` / `status` / `settings` / `run --once` / `update`). `corvus gui` is a PySide6 splash on the same layer as the CLI: a thin client of Node. The splash does not talk to Node in this version. Node owns jailer, vsock, RBAC, and the control socket. The GUI team owns `gui/`; core publishes the socket contract in `docs/gui/AVAILABLE.md`. Social gateways (Telegram, WhatsApp) identify principals on Node later. A fleet control plane is Corvus Hypervisor — later, not a box in this graph. Host-root / SEV-SNP is out of scope: if the box is owned, RAM dumps win.
 
-Allowed workspaces are attached to **Node**. `--workspace /path` is a live host directory Node may read and write after RBAC. File tools use `/workspace` paths that Node maps onto that tree. The rest of the host is invisible. The guest does not mount the host folder.
+Allowed workspaces are attached to **Node**. `--workspace /path` is a live host directory Node may read and write after RBAC. The operator CLI also creates a default directory (`$XDG_DATA_HOME/corvus-node/workspace`, or `~/.local/share/corvus-node/workspace`, mode `0700`). That directory is not on the allowlist until `settings set workspace default` or a custom path is set. File tools use `/workspace` paths that Node maps onto the allowed tree. `file_list` lists one directory level. The rest of the host is invisible. The guest does not mount the host folder.
 
 ## Transport
 

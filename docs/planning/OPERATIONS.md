@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, POLICY.md, ROADMAP.md, CHANGES.md, SECURITY.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 
@@ -114,18 +114,20 @@ corvus vm stop
 corvus stop
 corvus run --once "hello"
 corvus run --once --tools echo "hello"
-corvus vm start --workspace /path/to/tree --tools file_read,file_write
+corvus vm start --workspace /path/to/tree --tools file_read,file_write,file_list
 corvus update
 ```
 
 If the Node service is not running, `corvus start` brings it up (asks before the VM). `vm` / `chat` **fail closed** until Node is up. `status` still runs and shows `Node: down`. `corvus gui` does not need Node; it fail-closes if PySide/Qt is missing. There is no TCP fallback and no raw Firecracker.
 
-Default vsock port: `4040`. Guest CID is assigned at launch. `--workspace /path` is a live host directory Node may read and write after RBAC (one path). The guest does not mount that folder. Writes land on the host immediately. A later turn, or your editor, sees the same files.
+Default vsock port: `4040`. Guest CID is assigned at launch. `--workspace /path` is a live host directory Node may read and write after RBAC (one path). `corvus status`, `corvus settings`, `corvus start`, and `corvus vm start` create `$XDG_DATA_HOME/corvus-node/workspace` (or `~/.local/share/corvus-node/workspace`, mode `0700`) if it is missing. That directory stays disabled until `corvus settings set workspace default`. A custom path is `settings set workspace /path` or `--workspace`. `settings unset workspace` turns the allowlist off and leaves the files in place. The guest does not mount that folder. Writes land on the host immediately. A later turn, or your editor, sees the same files.
 
 Launch rules also live in `$XDG_CONFIG_HOME/corvus-node/launch.json` (`settings set` / `unset`). CLI flags override the file for that invocation. A running VM is not hot-patched; `vm stop` then `vm start` to apply.
 
 ```bash
+corvus settings set workspace default
 corvus run --once --workspace /path/to/tree --tools file_read "review notes.txt"
+corvus run --once --workspace /path/to/tree --tools file_list "list the workspace"
 corvus run --once --workspace /path/to/tree --tools file_write "edit notes.txt to 'done'"
 ```
 

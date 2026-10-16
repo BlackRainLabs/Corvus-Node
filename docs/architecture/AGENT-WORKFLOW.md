@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Related Documents:** OVERVIEW.md, POLICY.md, OPERATIONS.md, CHANGES.md, SECURITY.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md. Engine 3 must never call tools or memory. Node is on the host; engines are in the VM.
@@ -45,8 +45,8 @@ Mandatory rules for the four engines inside the Firecracker VM. Guest code is un
 - May originate `tool_call` and `tool_result` only.
 - Must not execute until inbound `tool_call_response` has `approved: true`.
 - Guest-side tools (`echo`) run in the guest after allow. Node never runs arbitrary agent tool code.
-- `file_read` / `file_write` are Node-owned host I/O on `--workspace`. Engine 1 must use `tool_call_response.result` and must not open host files.
-- File-tool paths stay under `/workspace`. Node denies and flags `path_escape` before allow.
+- `file_read` / `file_write` / `file_list` are Node-owned host I/O on an allowed workspace. Engine 1 must use `tool_call_response.result` and must not open host files.
+- File-tool paths stay under `/workspace`. `file_list` may name the workspace root and lists one directory level. Node denies and flags `path_escape` before allow. The default host directory is not allowed until the operator sets it.
 
 ### Engine 2 — Channels
 

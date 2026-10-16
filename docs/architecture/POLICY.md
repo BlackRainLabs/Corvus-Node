@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-31
+**Last Updated:** 2026-10-16
 **Related Documents:** OVERVIEW.md, AGENT-WORKFLOW.md, OPERATIONS.md, CHANGES.md, AVAILABLE.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md. Node performs deterministic RBAC only. No LLM inspection on the host. CLI writes rules; it does not skip the filter.
@@ -26,7 +26,7 @@ First match wins. Implicit last rule: deny.
 1. **Wire** — HMAC + seq. Drop and flag on failure. Not an RBAC allow.
 2. **Path** — engine may send this message type (`ALLOWED_OUTBOUND`).
 3. **Launch capability** — tool must be in the VM allowlist. Adding a tool requires a new microVM.
-4. **Workspace** — `file_read` / `file_write` require `--workspace`. The path must stay under `/workspace` after normalize. Else deny and flag `path_escape`. Node then reads or writes the host allowlist (not a guest disk).
+4. **Workspace** — `file_read` / `file_write` / `file_list` require an allowed workspace. Creating the default directory does not allow it. The path must stay under `/workspace` after normalize (`file_list` may name `/workspace` itself). Else deny and flag `path_escape`. Node then reads, lists, or writes the host allowlist (not a guest disk). Symlinks are not followed.
 5. **Principal rule** — this identity may use that capability. `--tools echo` installs echo in the guest and an allow rule for the **operator** only.
 6. **Risk action** — `allow` / `deny` / `elevate` / `flag`.
 
@@ -43,7 +43,7 @@ Principal: `{issuer, subject, role}` (e.g. `local:operator`, `telegram:12345`). 
 Deterministic. No LLM judgment on Node.
 
 - `chat` — implicit, no tool
-- `low` — `echo`, `file_read` (operator allow if launched)
+- `low` — `echo`, `file_read`, `file_list` (operator allow if launched)
 - `write` — `file_write`; `elevate` for non-operator
 - `exec` / `net` — future shell/network; `elevate` for non-operator
 
@@ -61,6 +61,6 @@ Host-minted hop key on `session_init` (never on cmdline, never fully logged). En
 
 ## Flags
 
-Deterministic: `mac_fail`, `engine_spoof`, `unknown_tool`, `deny_burst`, `replay`, `seq_gap`, `unbound_tool_result`, `turn_cap`, `path_escape`. File-tool paths must stay under `/workspace` after normalize. File tools are hidden unless `--workspace` is set.
+Deterministic: `mac_fail`, `engine_spoof`, `unknown_tool`, `deny_burst`, `replay`, `seq_gap`, `unbound_tool_result`, `turn_cap`, `path_escape`. File-tool paths must stay under `/workspace` after normalize. File tools are hidden unless a workspace is allowed. The default directory (`$XDG_DATA_HOME/corvus-node/workspace`, or `~/.local/share/corvus-node/workspace`) is created by the operator CLI and stays disabled until `settings set workspace default` (or a custom path).
 
 **Black Rain Labs - Research & Development Division**

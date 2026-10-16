@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from corvus_node import __version__
 
-THIS_BUILD = "chat, start/stop, echo, file read/write, splash GUI"
+THIS_BUILD = "chat, start/stop, echo, file read/write/list, default workspace, splash GUI"
 NOT_IN_THIS_BUILD = "live AI model, extra skills, saved memory, full operator window"
 LLM_NAME = "stub"
 CLI_NAME = "corvus"
@@ -45,7 +45,19 @@ def build_lines() -> list[str]:
     ]
 
 
-def format_runtime_status(pid: int | None, snap: dict | None, *, error: str = "") -> list[str]:
+def format_workspace_line(workspace: str | None, *, default_workspace: str) -> str:
+    if workspace:
+        return f"Workspace: {workspace} (allowed)"
+    return f"Workspace: {default_workspace} (disabled)"
+
+
+def format_runtime_status(
+    pid: int | None,
+    snap: dict | None,
+    *,
+    error: str = "",
+    default_workspace: str = "",
+) -> list[str]:
     """Node service vs guest VM. Node down is not the same as VM idle."""
     if pid is None:
         return ["Node: down", "VM: (none)"]
@@ -53,11 +65,11 @@ def format_runtime_status(pid: int | None, snap: dict | None, *, error: str = ""
         extra = f" ({error})" if error else ""
         return [f"Node: up  pid={pid}{extra}", "VM: (unknown)"]
     lines = [f"Node: up  pid={snap.get('pid', pid)}"]
-    lines.extend(format_vm_status(snap))
+    lines.extend(format_vm_status(snap, default_workspace=default_workspace))
     return lines
 
 
-def format_vm_status(snap: dict) -> list[str]:
+def format_vm_status(snap: dict, *, default_workspace: str = "") -> list[str]:
     state = str(snap.get("state") or "idle")
     vm_id = str(snap.get("vm_instance_id") or "")
     if state == "running":
@@ -65,6 +77,11 @@ def format_vm_status(snap: dict) -> list[str]:
         tools = ",".join(snap.get("tools") or []) or "(none)"
         workspace = snap.get("workspace") or []
         lines.append(f"Tools: {tools}")
-        lines.append(f"Workspace: {workspace[0] if workspace else '(none)'}")
+        if workspace:
+            lines.append(f"Workspace: {workspace[0]} (allowed)")
+        elif default_workspace:
+            lines.append(f"Workspace: {default_workspace} (disabled)")
+        else:
+            lines.append("Workspace: (disabled)")
         return lines
     return [f"VM: {state}"]

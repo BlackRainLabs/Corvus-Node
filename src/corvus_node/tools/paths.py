@@ -30,3 +30,14 @@ def workspace_relpath(raw: str, *, root: str = WORKSPACE_GUEST_ROOT) -> str | No
     if not rel or rel.startswith("/") or ".." in rel.split("/"):
         return None
     return rel
+
+
+def workspace_list_relpath(raw: str, *, root: str = WORKSPACE_GUEST_ROOT) -> str | None:
+    """Relative directory under root, or '' for the root. None on escape."""
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    root_n = posixpath.normpath(root)
+    if text in ("", ".", root_n):
+        return ""
+    return workspace_relpath(text, root=root)

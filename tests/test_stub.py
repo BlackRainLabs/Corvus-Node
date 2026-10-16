@@ -10,6 +10,8 @@ _READ = [{"name": "file_read"}]
 _WRITE = [{"name": "file_write"}]
 _BOTH = [{"name": "file_read"}, {"name": "file_write"}]
 _ECHO = [{"name": "echo"}]
+_LIST = [{"name": "file_list"}]
+_READ_LIST = [{"name": "file_read"}, {"name": "file_list"}]
 
 
 def test_chat_without_tools() -> None:
@@ -77,6 +79,26 @@ def test_after_tools_ignores_prior_turn_tools() -> None:
     )
     assert out.tool_calls[0]["name"] == "file_read"
     assert out.tool_calls[0]["arguments"]["path"] == "notes.txt"
+
+
+def test_list_keyword_picks_file_list() -> None:
+    for text in ("list the workspace", "ls", "dir"):
+        out = StubLlm().complete([{"role": "user", "content": text}], tools_schema=_LIST)
+        assert out.tool_calls[0]["name"] == "file_list"
+        assert out.tool_calls[0]["arguments"]["path"] == "/workspace"
+
+
+def test_list_beats_read_default_when_echo_missing() -> None:
+    out = StubLlm().complete(
+        [{"role": "user", "content": "ls"}],
+        tools_schema=_READ_LIST,
+    )
+    assert out.tool_calls[0]["name"] == "file_list"
+
+
+def test_hello_does_not_list() -> None:
+    out = StubLlm().complete([{"role": "user", "content": "hello"}], tools_schema=_LIST)
+    assert out.tool_calls == []
 
 
 def test_after_tools_stops() -> None:
