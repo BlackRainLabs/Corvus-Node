@@ -127,6 +127,8 @@ def test_help_and_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert "vm start" in out
     assert "asks before" in out or "Enter skips" in out
     assert "corvus gui" in out or "splash" in out
+    assert "settings set workspace default" in out
+    assert "file_list" in out
     assert "CLI and GUI" in out
     assert "bring Corvus up" not in out
     assert main(["version"]) == 0

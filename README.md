@@ -32,7 +32,7 @@ The installer tries to set up the GUI runtime (PySide/Qt). If that is not availa
 ## First run
 
 ```bash
-corvus status              # is Corvus-Node up?
+corvus status              # is Corvus-Node up? is the default folder off?
 corvus start               # bring Corvus-Node up; asks before the VM (Enter skips)
 corvus vm start            # start the isolated agent
 corvus chat                # type a line, then /exit
@@ -46,7 +46,7 @@ corvus vm stop             # end the session; Corvus-Node stays ready
 
 | Command | What it does |
 | --- | --- |
-| `corvus status` | Is Corvus-Node up? Is an agent session running? |
+| `corvus status` | Is Corvus-Node up? Is an agent session running? Shows the default folder as off until you allow it |
 | `corvus start` | Start Corvus-Node. Asks before starting the VM; Enter skips. `--yes` starts the VM too |
 | `corvus vm start` | Start the isolated agent |
 | `corvus chat` | Talk to it until you type `/exit` (the session stays up) |
@@ -54,10 +54,15 @@ corvus vm stop             # end the session; Corvus-Node stays ready
 | `corvus vm stop` | End the agent session; Corvus-Node stays ready in the background (asks first) |
 | `corvus stop` | End the session **and** shut Corvus-Node down (asks first) |
 | `corvus vm status` | Agent session only |
+| `corvus settings` | Show the remembered folder and tools |
+| `corvus settings set workspace default` | Allow the default folder (`~/.local/share/corvus-node/workspace`) |
+| `corvus settings set workspace /path` | Allow a different folder (one path) |
+| `corvus settings unset workspace` | Turn the folder off. The files stay |
+| `corvus settings set tools echo,file_read,file_write,file_list` | Remember which tools the next start may use |
 | `corvus run --once "hello"` | One reply, then done |
 | `corvus update` | Install a newer GitHub release for the CLI and GUI (asks before replacing; stops Corvus-Node first if it is running) |
 
-Optional: `--tools echo` lets the agent echo text back. `corvus status` creates a default folder and leaves it off until `corvus settings set workspace default`. `--workspace /path --tools file_read,file_list` lets it read or list files in that folder only — nowhere else. `corvus settings` remembers those choices. A running session does not pick up new rules; `vm stop` then `vm start`. Add `--yes` to skip the “are you sure?” prompt on stop or update.
+`corvus status` creates the default folder and leaves it off. Allowing a folder does not turn tools on. `echo` sends text back. `file_read`, `file_write`, and `file_list` work only in the folder you allowed — nowhere else. `file_list` shows one directory level. A running session does not pick up new rules; `corvus vm stop` then `corvus vm start`. For one launch, `--workspace /path` and `--tools file_read,file_list` override what `corvus settings` remembered. Add `--yes` to skip the “are you sure?” prompt on stop or update.
 
 ### If something goes wrong
 

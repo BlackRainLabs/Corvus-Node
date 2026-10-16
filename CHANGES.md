@@ -4,6 +4,20 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-10-16] - operator copy lists workspace commands
+
+**Documents Modified:**
+- `README.md`, `AGENTS.md`, `src/corvus_node/node/info.py`, `src/corvus_node/cli.py`
+- `docs/planning/OPERATIONS.md`, `Makefile`, `packaging/operator-install.sh`, `packaging/check-prereqs.sh`
+- `tests/test_cli.py`, `CHANGES.md`
+
+**Key Changes:**
+- README, `corvus --help`, the installer “You're set” list, and `make help` name `corvus settings`, `settings set workspace default`, `settings set workspace /path`, `settings unset workspace`, and `settings set tools` (`echo`, `file_read`, `file_write`, `file_list`).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-10-16] - default workspace stays disabled until allowed
 
 **Documents Modified:**

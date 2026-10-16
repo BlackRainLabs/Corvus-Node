@@ -909,7 +909,10 @@ fi
 echo
 echo "${C_BOLD}You're set${C_RST}"
 cat <<EOF
-  ${C_BOLD}corvus status${C_RST}     ${C_DIM}# is Corvus-Node up?${C_RST}
+  ${C_BOLD}corvus status${C_RST}     ${C_DIM}# is Corvus-Node up? is the default folder off?${C_RST}
+  ${C_BOLD}corvus settings${C_RST}   ${C_DIM}# show the folder and tools${C_RST}
+  ${C_BOLD}corvus settings set workspace default${C_RST}  ${C_DIM}# allow the default folder${C_RST}
+  ${C_BOLD}corvus settings set tools file_read,file_write,file_list${C_RST}
   ${C_BOLD}corvus start${C_RST}      ${C_DIM}# bring Corvus-Node up; asks before the VM (Enter skips)${C_RST}
   ${C_BOLD}corvus vm start${C_RST}   ${C_DIM}# start the isolated agent${C_RST}
   ${C_BOLD}corvus chat${C_RST}       ${C_DIM}# talk to it; type /exit when done${C_RST}
