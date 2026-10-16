@@ -8,7 +8,10 @@ help:
 	@echo "  ./install.sh        Install (password only when needed)"
 	@echo
 	@echo "Then:"
-	@echo "  corvus status       Is Corvus-Node up?"
+	@echo "  corvus status       Is Corvus-Node up? Is the default folder off?"
+	@echo "  corvus settings     Show the folder and tools"
+	@echo "  corvus settings set workspace default"
+	@echo "  corvus settings set tools echo,file_read,file_write,file_list"
 	@echo "  corvus start        Bring Corvus-Node up (asks before the VM; Enter skips)"
 	@echo "  corvus vm start     Start the isolated agent"
 	@echo "  corvus chat         Talk to it; type /exit when done"

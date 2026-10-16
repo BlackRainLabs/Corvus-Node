@@ -108,12 +108,15 @@ def main(argv: list[str] | None = None) -> int:
     vm_sub.add_parser("status", help="agent session only")
     update_p = sub.add_parser("update", help="install a newer Corvus-Node release (CLI and GUI)")
     _yes_flag(update_p)
-    settings_p = sub.add_parser("settings", help="remember tools and folder for next start")
+    settings_p = sub.add_parser("settings", help="show or remember the folder and tools")
     settings_sub = settings_p.add_subparsers(dest="settings_cmd")
-    set_p = settings_sub.add_parser("set", help="set a launch rule")
+    set_p = settings_sub.add_parser("set", help="remember a launch rule for the next start")
     set_p.add_argument("key", choices=["tools", "workspace"])
-    set_p.add_argument("value")
-    unset_p = settings_sub.add_parser("unset", help="clear a launch rule")
+    set_p.add_argument(
+        "value",
+        help="tool list (echo,file_read,file_write,file_list), a folder path, or default",
+    )
+    unset_p = settings_sub.add_parser("unset", help="clear a launch rule; the folder stays on disk")
     unset_p.add_argument("key", choices=["tools", "workspace"])
     run_p = sub.add_parser("run", help="one reply, then done")
     run_p.add_argument(

@@ -15,11 +15,15 @@ Linux with KVM. Sudo only when the installer needs it. `corvus` uses group `corv
 ```bash
 ./install.sh
 corvus status
+corvus settings                         # default folder is disabled
+corvus settings set workspace default   # allow that folder
+corvus settings set tools file_read,file_write,file_list
 corvus start              # Node; asks before the VM (Enter skips)
 corvus vm start           # isolated agent, no extra prompt
 corvus chat
 corvus gui                # splash (this preview; does not talk to the agent)
 corvus vm stop
+corvus settings unset workspace         # turn the folder off; files stay
 ```
 
 `./install.sh` from a **git checkout** (or an unpacked release snapshot that still has `src/`) installs **this tree**. `--release`, or a directory with no Corvus-Node source, fetches the GitHub **release wheel**. The installer does **not** tell you GitHub has a newer version; `corvus status` and `corvus update` do that. If Corvus-Node is already installed, the installer asks to upgrade or keep the current version. It puts `corvus` on PATH (`/usr/local/bin/corvus`). Re-runs skip green already-up-to-date steps. If Node is already running **and** this run will replace files, the installer explains and asks before shutting it down (guest then systemd), then continues and starts Node again. The end of the installer prints a **Status** block (`corvus status --brief`: Node and VM only) then **You're set**. `vm stop` shuts down the guest VM (confirmation); the Node systemd unit stays up. `corvus stop` shuts down the guest then Node (confirmation; sudo for systemd). After `corvus stop`, start again with `corvus start` (not `./install.sh`). If Node is down, `vm` / `chat` fail closed (`corvus start` after an install).
@@ -69,6 +73,8 @@ Every version ships a runnable operator CLI. `corvus --help` and `corvus status`
 ./install.sh
 # or: make guest-assets && sudo make install
 corvus status
+corvus settings set workspace default
+corvus settings set tools file_read,file_write,file_list
 corvus start              # Node; asks before the VM (Enter skips)
 corvus vm start
 ```
@@ -106,6 +112,11 @@ Hashed kernel, rootfs, jailer, Firecracker, and KVM are required for a guest VM.
 
 ```bash
 corvus status
+corvus settings
+corvus settings set workspace default
+corvus settings set workspace /path/to/tree
+corvus settings unset workspace
+corvus settings set tools echo,file_read,file_write,file_list
 corvus start
 corvus vm start
 corvus chat
